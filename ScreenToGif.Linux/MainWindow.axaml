@@ -159,7 +159,7 @@
                     </ScrollViewer>
                 </controls:RibbonTabItem>
                 <controls:RibbonTabItem Header="Transitions" IconKind="Fade">
-                    <StackPanel Orientation="Horizontal" Height="94" Margin="2" Background="#2B2E32"><Border Classes="ribbon-group"><Grid RowDefinitions="*,16"><StackPanel Orientation="Horizontal"><controls:RibbonButton Label="Fade" IconKind="Fade" IsEnabled="False" /><controls:RibbonButton Label="Slide" IconKind="Slide" IsEnabled="False" /></StackPanel><TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="Transitions" /></Grid></Border></StackPanel>
+                    <StackPanel Orientation="Horizontal" Height="94" Margin="2" Background="#2B2E32"><Border Classes="ribbon-group"><Grid RowDefinitions="*,16"><StackPanel Orientation="Horizontal"><controls:RibbonButton Label="Fade" IconKind="Fade" Click="FadeClick" /><controls:RibbonButton Label="Slide" IconKind="Slide" Click="SlideClick" /></StackPanel><TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="Transitions" /></Grid></Border></StackPanel>
                 </controls:RibbonTabItem>
                 <controls:RibbonTabItem Header="Statistics" IconKind="Zoom">
                     <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,24,Auto,24,Auto"><StackPanel Margin="12,10"><TextBlock Text="Frames" Foreground="#9299A2" /><TextBlock Text="Current editor statistics" FontSize="16" /></StackPanel><StackPanel Grid.Column="2" Margin="12,10"><TextBlock Text="Selection" Foreground="#9299A2" /><TextBlock Text="See status bar" FontSize="16" /></StackPanel></Grid>
