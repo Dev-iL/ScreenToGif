@@ -86,17 +86,17 @@
                 <controls:RibbonTabItem Header="Playback" IconKind="Play">
                     <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,7,Auto,7,*">
                         <Grid Grid.Column="0" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" RowDefinitions="*,16">
-                            <controls:RibbonButton Grid.Column="0" Label="First" IconKind="First" IconWidth="38" IsEnabled="False" />
-                            <controls:RibbonButton Grid.Column="1" Label="Previous" IconKind="Previous" IsEnabled="False" />
-                            <controls:RibbonButton Grid.Column="2" Label="Play" IconKind="Play" Click="PlayClick" />
-                            <controls:RibbonButton Grid.Column="3" Label="Next" IconKind="Next" IsEnabled="False" />
-                            <controls:RibbonButton Grid.Column="4" Label="Last" IconKind="Last" IconWidth="38" IsEnabled="False" />
+                            <controls:RibbonButton x:Name="FirstPlaybackButton" Grid.Column="0" Label="First" IconKind="First" IconWidth="38" Click="FirstClick" />
+                            <controls:RibbonButton x:Name="PreviousPlaybackButton" Grid.Column="1" Label="Previous" IconKind="Previous" Click="PreviousClick" />
+                            <controls:RibbonButton x:Name="RibbonPlayButton" Grid.Column="2" Label="Play" IconKind="Play" Click="PlayClick" />
+                            <controls:RibbonButton x:Name="NextPlaybackButton" Grid.Column="3" Label="Next" IconKind="Next" Click="NextClick" />
+                            <controls:RibbonButton x:Name="LastPlaybackButton" Grid.Column="4" Label="Last" IconKind="Last" IconWidth="38" Click="LastClick" />
                             <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Classes="ribbon-group-label" Text="Playback" />
                         </Grid>
                         <Border Grid.Column="1" Width="1" Background="#45484E" Margin="3,2" />
                         <Grid Grid.Column="2" Margin="0,1,0,0" RowDefinitions="*,*,16">
-                            <CheckBox Content="Loop playback" Margin="5,3" IsEnabled="False" />
-                            <CheckBox Grid.Row="1" Content="Drop frames when behind" Margin="5,3" IsEnabled="False" />
+                            <CheckBox x:Name="LoopPlaybackCheckBox" Content="Loop playback" Margin="5,3" ToolTip.ShowOnDisabled="True" />
+                            <CheckBox x:Name="DropFramesCheckBox" Grid.Row="1" Content="Drop frames when behind" Margin="5,3" ToolTip.ShowOnDisabled="True" />
                             <TextBlock Grid.Row="2" Classes="ribbon-group-label" Text="Playback options" />
                         </Grid>
                     </Grid>
@@ -172,10 +172,10 @@
         </Border>
         <Border Grid.Row="2" Background="#25272A" BorderBrush="#45484E" BorderThickness="0,1,0,1" Padding="6,5,6,6">
             <ListBox x:Name="FrameListBox" SelectionMode="Multiple" SelectionChanged="FrameSelectionChanged" KeyDown="FrameListKeyDown" Focusable="True" IsTabStop="True" MinHeight="116" MaxHeight="140" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                <ListBox.ItemTemplate><DataTemplate><Border Classes="frame-card" Width="116" Height="106" Margin="0,0,4,0" Padding="4" BorderThickness="1" CornerRadius="3"><Grid RowDefinitions="*,Auto,Auto"><Image Width="106" Height="70" Stretch="UniformToFill" Source="{Binding Thumbnail}" /><TextBlock Grid.Row="1" Margin="2,3,2,0" Text="{Binding FrameNumber}" TextTrimming="CharacterEllipsis" Foreground="#D1D6DC" FontSize="11" /><TextBlock Grid.Row="2" Margin="2,1,2,0" Foreground="#72B7E5" Text="{Binding DelayText}" FontSize="11" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
+                <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                <ListBox.ItemTemplate><DataTemplate><Border Classes="frame-card" Width="116" Height="106" Margin="0,0,4,0" Padding="4" BorderThickness="1" CornerRadius="3"><Grid RowDefinitions="*,Auto,Auto"><Image Width="106" Height="70" Stretch="UniformToFill" Source="{Binding Thumbnail}" /><Border Height="4" VerticalAlignment="Top" Background="#72B7E5" IsVisible="{Binding IsCurrent}" /><TextBlock Grid.Row="1" Margin="2,3,2,0" Text="{Binding FrameNumber}" TextTrimming="CharacterEllipsis" Foreground="#D1D6DC" FontSize="11" /><TextBlock Grid.Row="2" Margin="2,1,2,0" Foreground="#72B7E5" Text="{Binding DelayText}" FontSize="11" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
         </Border>
-        <Border Grid.Row="3" Height="20" Background="#25272A" Padding="5,0"><Grid ColumnDefinitions="Auto,7,*,5,Auto,5,Auto,5,200"><TextBlock x:Name="StatusText" Text="Ready" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" /><Border Grid.Column="1" Width="1" Background="#45484E" Margin="3,2" /><StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"><TextBlock x:Name="FrameCountText" Text="0" Foreground="#16803C" /><TextBlock x:Name="SelectedCountText" Text="0" Foreground="#B03030" Margin="8,0,0,0" /><TextBlock x:Name="CurrentFrameText" Text="—" Foreground="#2166A5" Margin="8,0,0,0" /></StackPanel><Border Grid.Column="3" Width="1" Background="#45484E" Margin="1,2" /><Button Grid.Column="4" Classes="status-button" ToolTip.Tip="Play" Click="PlayClick"><icons:WindowsIcon Kind="Play" Width="15" Height="15" /></Button><Button Grid.Column="6" Classes="status-button" ToolTip.Tip="Stop" Click="StopClick"><icons:WindowsIcon Kind="Stop" Width="15" Height="15" /></Button><Button Grid.Column="8" Classes="status-button" HorizontalAlignment="Right" ToolTip.Tip="Close editor" Click="ExitClick"><icons:WindowsIcon Kind="Cancel" Width="15" Height="15" /></Button></Grid></Border>
+        <Border Grid.Row="3" Height="20" Background="#25272A" Padding="5,0"><Grid ColumnDefinitions="Auto,7,*,5,Auto,5,Auto,5,200"><TextBlock x:Name="StatusText" Text="Ready" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" /><Border Grid.Column="1" Width="1" Background="#45484E" Margin="3,2" /><StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4"><TextBlock x:Name="FrameCountText" Text="0" Foreground="#16803C" /><TextBlock x:Name="SelectedCountText" Text="0" Foreground="#B03030" Margin="8,0,0,0" /><TextBlock x:Name="CurrentFrameText" Text="—" Foreground="#2166A5" Margin="8,0,0,0" /></StackPanel><Border Grid.Column="3" Width="1" Background="#45484E" Margin="1,2" /><Button x:Name="StatusPlayButton" Grid.Column="4" Classes="status-button" ToolTip.Tip="Play" Click="PlayClick"><icons:WindowsIcon x:Name="StatusPlayIcon" Kind="Play" Width="15" Height="15" /></Button><Button Grid.Column="6" Classes="status-button" ToolTip.Tip="Stop" Click="StopClick"><icons:WindowsIcon Kind="Stop" Width="15" Height="15" /></Button><Button Grid.Column="8" Classes="status-button" HorizontalAlignment="Right" ToolTip.Tip="Close editor" Click="ExitClick"><icons:WindowsIcon Kind="Cancel" Width="15" Height="15" /></Button></Grid></Border>
     </Grid>
 </Window>
