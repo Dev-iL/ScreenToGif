@@ -14,17 +14,30 @@ namespace ScreenToGif.Linux;
 
 public partial class MainWindow : Window
 {
+    partial void InitializeHome();
+    partial void InitializeEdit();
+    partial void InitializeFileLifecycle();
+    partial void InitializePlayback();
+    partial void InitializeStatistics();
+
+    private const int ThumbnailDecodeWidth = 212;
     private readonly FfmpegTool _ffmpeg = new();
     private readonly ObservableCollection<EditorFrame> _frames = [];
-    private readonly List<string> _workspaces = [];
     private readonly MediaImporter _importer;
     private readonly FfmpegExporter _exporter;
-    private readonly FrameDeletionHistory _deletionHistory = new();
-    private readonly DispatcherTimer _previewTimer = new();
-    private string _workspacePath;
+    private readonly FrameEditHistory _history = new();
+    private readonly EditorMutationCoordinator _mutations;
+    private readonly FrameTransformService _transformer;
+    private readonly EditorOperationCoordinator _operations = new();
+    private EditorWorkspace _workspace;
     private Bitmap? _previewBitmap;
-    private int _previewIndex;
-    private bool _isPlaying;
+    private EditorFrame? _currentFrame;
+    private int _currentFrameIndex = -1;
+    private Action _stopActivePreview = static () => { };
+    private event Action? OperationStateChanged;
+    private event Action? FrameInfoUpdated;
+    private event Action? CleanupRequested;
+    private event Action? HistoryStateChanged;
 
     public MainWindow()
     {
@@ -32,446 +45,59 @@ public partial class MainWindow : Window
 
         _importer = new MediaImporter(_ffmpeg);
         _exporter = new FfmpegExporter(_ffmpeg);
-        _workspacePath = ProjectArchive.CreateWorkspace();
-        _workspaces.Add(_workspacePath);
+        _transformer = new FrameTransformService(_ffmpeg);
+        _mutations = new EditorMutationCoordinator(_history, CaptureSnapshot, RefreshEditorAfterMutation);
+        _workspace = EditorWorkspace.Create();
+        _history.BranchDiscarded += PruneUnreachableGeneratedFiles;
 
         FrameListBox.ItemsSource = _frames;
+        InitializeHome();
+        InitializeEdit();
+        InitializeFileLifecycle();
+        InitializePlayback();
+        InitializeStatistics();
         UpdateFrameInfo();
-        _previewTimer.Tick += PreviewTimerTick;
+        _history.SetBaseline(CaptureSnapshot());
+        MarkClean();
         Closed += (_, _) => CleanupWorkspaces();
-    }
-
-    private async void OpenMediaClick(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Open media",
-                AllowMultiple = true,
-                FileTypeFilter =
-                [
-                    new FilePickerFileType("Supported media")
-                    {
-                        Patterns =
-                        [
-                            "*.apng", "*.avi", "*.avif", "*.bmp", "*.gif", "*.jpeg", "*.jpg",
-                            "*.mkv", "*.mov", "*.mp4", "*.png", "*.webm", "*.webp", "*.wmv"
-                        ]
-                    }
-                ]
-            });
-
-            var paths = files.Select(GetLocalPath).Where(path => path != null).Cast<string>().ToArray();
-
-            if (paths.Length == 0)
-                return;
-
-            await ImportPathsAsync(paths);
-        }
-        catch (Exception ex)
-        {
-            SetError(ex);
-        }
-    }
-
-    private void DragOver(object? sender, DragEventArgs e)
-    {
-        // Some Linux file managers expose file drops as text/uri-list instead of
-        // Avalonia's structured DataFormat.File. Accept the drag first and let
-        // GetDroppedPaths decide whether it contains usable local files.
-        e.DragEffects = DragDropEffects.Copy;
-        e.Handled = true;
-    }
-
-    private async void Drop(object? sender, DragEventArgs e)
-    {
-        e.Handled = true;
-
-        try
-        {
-            var paths = GetDroppedPaths(e.DataTransfer);
-
-            if (paths.Length == 0)
-            {
-                SetStatus("Drop one or more media files to import them.");
-                return;
-            }
-
-            await ImportPathsAsync(paths);
-        }
-        catch (Exception ex)
-        {
-            SetError(ex);
-        }
-    }
-
-    private async Task ImportPathsAsync(IReadOnlyList<string> paths)
-    {
-        SetStatus($"Importing {paths.Count} file(s)...");
-        var imported = await _importer.ImportAsync(paths, _workspacePath);
-        _deletionHistory.Clear();
-        AddFrames(imported);
-        SetStatus($"Imported {imported.Count} frame(s).");
-    }
-
-    private async void OpenProjectClick(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Open ScreenToGif Linux project",
-                AllowMultiple = false,
-                FileTypeFilter =
-                [
-                    new FilePickerFileType("ScreenToGif Linux project") { Patterns = ["*.stg-linux"] }
-                ]
-            });
-
-            var path = files.Select(GetLocalPath).FirstOrDefault(value => value != null);
-
-            if (path == null)
-                return;
-
-            SetStatus("Loading project...");
-            var loaded = await ProjectArchive.LoadAsync(path);
-            var oldWorkspace = _workspacePath;
-            _workspacePath = loaded.WorkspacePath;
-            _workspaces.Add(_workspacePath);
-
-            ReplaceFrames(loaded.Frames);
-            ProjectArchive.TryDeleteWorkspace(oldWorkspace);
-            _workspaces.Remove(oldWorkspace);
-            SetStatus($"Loaded {loaded.Frames.Count} frame(s).");
-        }
-        catch (Exception ex)
-        {
-            SetError(ex);
-        }
-    }
-
-    private async void SaveProjectClick(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (_frames.Count == 0)
-            {
-                SetStatus("There are no frames to save.");
-                return;
-            }
-
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-            {
-                Title = "Save ScreenToGif Linux project",
-                SuggestedFileName = "screen-recording.stg-linux",
-                DefaultExtension = "stg-linux",
-                FileTypeChoices =
-                [
-                    new FilePickerFileType("ScreenToGif Linux project") { Patterns = ["*.stg-linux"] }
-                ]
-            });
-
-            var path = file?.TryGetLocalPath();
-
-            if (path == null)
-                return;
-
-            SetStatus("Saving project...");
-            await ProjectArchive.SaveAsync(path, _frames);
-            SetStatus($"Saved project to {Path.GetFileName(path)}.");
-        }
-        catch (Exception ex)
-        {
-            SetError(ex);
-        }
-    }
-
-    private async void ExportGifClick(object? sender, RoutedEventArgs e) => await ExportClickAsync("gif", "GIF");
-
-    private async void ExportApngClick(object? sender, RoutedEventArgs e) => await ExportClickAsync("apng", "APNG");
-
-    private async void ExportMp4Click(object? sender, RoutedEventArgs e) => await ExportClickAsync("mp4", "MP4");
-
-    private async void ExportWebmClick(object? sender, RoutedEventArgs e) => await ExportClickAsync("webm", "WebM");
-
-    private void PlayClick(object? sender, RoutedEventArgs e)
-    {
-        if (_frames.Count == 0)
-        {
-            SetStatus("There are no frames to preview.");
-            return;
-        }
-
-        _previewIndex = Math.Max(0, FrameListBox.SelectedIndex);
-        _isPlaying = true;
-        PreviewTimerTick(this, EventArgs.Empty);
-        SetStatus("Playing preview...");
-    }
-
-    private void StopClick(object? sender, RoutedEventArgs e)
-    {
-        StopPreview();
-        SetStatus("Preview stopped.");
-    }
-
-    private async Task ExportClickAsync(string extension, string formatName)
-    {
-        try
-        {
-            if (_frames.Count == 0)
-            {
-                SetStatus("There are no frames to export.");
-                return;
-            }
-
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-            {
-                Title = $"Export {formatName}",
-                SuggestedFileName = $"screen-recording.{extension}",
-                DefaultExtension = extension,
-                FileTypeChoices =
-                [
-                    new FilePickerFileType(formatName) { Patterns = [$"*.{extension}"] }
-                ]
-            });
-
-            var path = file?.TryGetLocalPath();
-
-            if (path == null)
-                return;
-
-            if (string.IsNullOrWhiteSpace(Path.GetExtension(path)))
-                path += $".{extension}";
-
-            SetStatus($"Exporting {formatName}...");
-            await _exporter.ExportAsync(_frames, path);
-            SetStatus($"Exported {formatName} to {Path.GetFileName(path)}.");
-        }
-        catch (Exception ex)
-        {
-            SetError(ex);
-        }
-    }
-
-    private void FrameSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        UpdateFrameInfo();
-
-        if (_isPlaying)
-            return;
-
-        // In multiple-selection mode Avalonia's SelectedItem is the first item
-        // in the range. Shift+Arrow moves focus to the active end of the range,
-        // so wait until focus has moved before choosing the preview frame.
-        Dispatcher.UIThread.Post(UpdateCurrentFramePreview);
-    }
-
-    private void UpdateCurrentFramePreview()
-    {
-        if (_isPlaying)
-            return;
-
-        var frame = GetFocusedTimelineFrame() ?? FrameListBox.SelectedItem as EditorFrame;
-
-        if (frame is null)
-        {
-            SetPreview(null);
-            return;
-        }
-
-        DelayTextBox.Text = frame.DelayMs.ToString();
-        SetPreview(frame);
-    }
-
-    private EditorFrame? GetFocusedTimelineFrame()
-    {
-        var focused = TopLevel.GetTopLevel(FrameListBox)?.FocusManager?.GetFocusedElement();
-
-        for (var visual = focused as Visual; visual is not null; visual = visual.GetVisualParent())
-        {
-            if (visual is ListBoxItem { DataContext: EditorFrame frame } &&
-                FrameListBox.SelectedItems?.Contains(frame) == true)
-                return frame;
-        }
-
-        return null;
-    }
-
-    private void FrameListKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None)
-        {
-            DeleteSelectedFrames();
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control)
-        {
-            UndoDelete();
-            e.Handled = true;
-        }
-    }
-
-    private void DeleteFrameClick(object? sender, RoutedEventArgs e) => DeleteSelectedFrames();
-
-    private void DeleteSelectedFrames()
-    {
-        var selected = GetSelectedFrames();
-
-        if (selected.Length == 0)
-            return;
-
-        StopPreview();
-        var deleted = selected
-            .Select(frame => (frame, index: _frames.IndexOf(frame)))
-            .Where(item => item.index >= 0)
-            .OrderBy(item => item.index)
-            .ToArray();
-
-        if (deleted.Length == 0)
-            return;
-
-        _deletionHistory.Record(
-            deleted.Select(item => item.frame),
-            deleted.Select(item => item.index),
-            selected,
-            FrameListBox.SelectedIndex);
-
-        foreach (var item in deleted)
-        {
-            _frames.Remove(item.frame);
-            item.frame.Dispose();
-        }
-
-        FrameListBox.SelectedItems?.Clear();
-        if (_frames.Count > 0)
-            FrameListBox.SelectedIndex = Math.Min(deleted[0].index, _frames.Count - 1);
-
-        UpdateFrameInfo();
-        SetStatus(deleted.Length == 1
-            ? "Deleted selected frame."
-            : $"Deleted {deleted.Length} selected frames.");
-    }
-
-    private void UndoDelete()
-    {
-        StopPreview();
-
-        if (!_deletionHistory.TryRestore(_frames, out var deleted))
-        {
-            SetStatus("Nothing to undo.");
-            return;
-        }
-
-        foreach (var frame in deleted.Frames)
-        {
-            if (frame.Thumbnail is not null || !File.Exists(frame.FilePath))
-                continue;
-
-            try
-            {
-                frame.Thumbnail = new Bitmap(frame.FilePath);
-            }
-            catch (Exception ex)
-            {
-                SetError(ex);
-            }
-        }
-
-        RestoreSelection(deleted.SelectedFrames);
-        UpdateFrameInfo();
-        SetStatus(deleted.Frames.Count == 1
-            ? "Restored deleted frame."
-            : $"Restored {deleted.Frames.Count} deleted frames.");
-    }
-
-    private void UndoDeleteClick(object? sender, RoutedEventArgs e) => UndoDelete();
-
-    private void MoveUpClick(object? sender, RoutedEventArgs e) => MoveSelected(-1);
-
-    private void MoveDownClick(object? sender, RoutedEventArgs e) => MoveSelected(1);
-
-    private void MoveSelected(int offset)
-    {
-        var selected = GetSelectedFrames();
-
-        if (selected.Length == 0 || offset == 0)
-            return;
-
-        _deletionHistory.Clear();
-        var selectedSet = selected.ToHashSet();
-        var reordered = _frames.ToArray();
-
-        if (offset < 0)
-        {
-            for (var index = 1; index < reordered.Length; index++)
-            {
-                if (selectedSet.Contains(reordered[index]) && !selectedSet.Contains(reordered[index - 1]))
-                    (reordered[index - 1], reordered[index]) = (reordered[index], reordered[index - 1]);
-            }
-        }
-        else
-        {
-            for (var index = reordered.Length - 2; index >= 0; index--)
-            {
-                if (selectedSet.Contains(reordered[index]) && !selectedSet.Contains(reordered[index + 1]))
-                    (reordered[index], reordered[index + 1]) = (reordered[index + 1], reordered[index]);
-            }
-        }
-
-        for (var index = 0; index < reordered.Length; index++)
-        {
-            var currentIndex = _frames.IndexOf(reordered[index]);
-            if (currentIndex != index)
-                _frames.Move(currentIndex, index);
-        }
-
-        RestoreSelection(selected);
-        UpdateFrameInfo();
-        SetStatus(selected.Length == 1
-            ? "Reordered selected frame."
-            : $"Reordered {selected.Length} selected frames.");
-    }
-
-    private void ApplyDelayClick(object? sender, RoutedEventArgs e)
-    {
-        if (!TryReadDelay(out var delay))
-            return;
-
-        var selected = GetSelectedFrames();
-        if (selected.Length == 0)
-            return;
-
-        foreach (var frame in selected)
-            frame.DelayMs = delay;
-
-        SetStatus(selected.Length == 1
-            ? $"Set selected frame delay to {delay} ms."
-            : $"Set {selected.Length} selected frame delays to {delay} ms.");
-    }
-
-    private void ApplyDelayAllClick(object? sender, RoutedEventArgs e)
-    {
-        if (!TryReadDelay(out var delay))
-            return;
-
-        foreach (var frame in _frames)
-            frame.DelayMs = delay;
-
-        SetStatus($"Set all frame delays to {delay} ms.");
     }
 
     private void ExitClick(object? sender, RoutedEventArgs e) => Close();
 
-    private void AddFrames(IEnumerable<EditorFrame> frames)
+    private async Task AddFramesAsync(
+        IEnumerable<EditorFrame> frames,
+        string operation,
+        CancellationToken cancellationToken)
     {
-        foreach (var frame in frames)
+        var incoming = frames.ToList();
+        try
         {
-            frame.Thumbnail = new Bitmap(frame.FilePath);
-            _frames.Add(frame);
+            EditorResourceLimits.EnsureCanInsertFrames(_frames.Count, incoming.Count, "Adding frames");
+            await EditorProjectBudget.EnsureTimelineBudgetAsync(
+                _frames.Select(frame => frame.FilePath).Concat(incoming.Select(frame => frame.FilePath)),
+                operation,
+                cancellationToken);
         }
+        catch
+        {
+            foreach (var frame in incoming)
+                frame.Dispose();
+            throw;
+        }
+
+        var prepared = await PrepareFramesAsync(incoming, cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        catch
+        {
+            foreach (var frame in prepared)
+                frame.Dispose();
+            throw;
+        }
+        foreach (var frame in prepared)
+            _frames.Add(frame);
 
         if (FrameListBox.SelectedIndex < 0 && _frames.Count > 0)
             FrameListBox.SelectedIndex = 0;
@@ -481,15 +107,112 @@ public partial class MainWindow : Window
 
     private void ReplaceFrames(IEnumerable<EditorFrame> frames)
     {
-        _deletionHistory.Clear();
-
+        var prepared = PrepareFrames(frames);
+        SetCurrentFrameIndex(-1);
         foreach (var frame in _frames)
             frame.Dispose();
 
         _frames.Clear();
         SetPreview(null);
-        AddFrames(frames);
+        foreach (var frame in prepared)
+            _frames.Add(frame);
+        if (_frames.Count > 0)
+            FrameListBox.SelectedIndex = 0;
+        UpdateFrameInfo();
+        _history.SetBaseline(CaptureSnapshot());
     }
+
+    private static async Task<List<EditorFrame>> PrepareFramesAsync(
+        IEnumerable<EditorFrame> frames,
+        CancellationToken cancellationToken)
+    {
+        var materializedFrames = frames.ToList();
+        return await Task.Run(
+            () => PrepareFrames(materializedFrames, cancellationToken),
+            CancellationToken.None);
+    }
+
+    private static List<EditorFrame> PrepareFrames(
+        IEnumerable<EditorFrame> frames,
+        CancellationToken cancellationToken = default)
+    {
+        var prepared = frames.ToList();
+        try
+        {
+            foreach (var frame in prepared)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (frame.Thumbnail is not null)
+                    continue;
+                var bitmap = PrepareBitmap(frame.FilePath);
+                frame.SourcePixelSize = bitmap.SourcePixelSize;
+                frame.Thumbnail = bitmap.Thumbnail;
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            return prepared;
+        }
+        catch
+        {
+            foreach (var frame in prepared)
+                frame.Dispose();
+            throw;
+        }
+    }
+
+    private static PreparedBitmap[] PrepareBitmaps(
+        IEnumerable<string> paths,
+        CancellationToken cancellationToken = default)
+    {
+        var bitmaps = new List<PreparedBitmap>();
+        try
+        {
+            foreach (var path in paths)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                bitmaps.Add(PrepareBitmap(path));
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            return bitmaps.ToArray();
+        }
+        catch
+        {
+            foreach (var bitmap in bitmaps)
+                bitmap.Thumbnail.Dispose();
+            throw;
+        }
+    }
+
+    private static Task<PreparedBitmap[]> PrepareBitmapsAsync(
+        IEnumerable<string> paths,
+        CancellationToken cancellationToken) =>
+        Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = PrepareBitmaps(paths, cancellationToken);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return result;
+            }
+            catch
+            {
+                foreach (var bitmap in result)
+                    bitmap.Thumbnail.Dispose();
+                throw;
+            }
+        }, cancellationToken);
+
+    private static PreparedBitmap PrepareBitmap(string path)
+    {
+        var dimensions = EditorProjectBudget.ReadPngDimensions(path);
+        using var stream = File.OpenRead(path);
+        var thumbnail = dimensions.Width >= dimensions.Height
+            ? Bitmap.DecodeToWidth(stream, Math.Min(dimensions.Width, ThumbnailDecodeWidth), BitmapInterpolationMode.MediumQuality)
+            : Bitmap.DecodeToHeight(stream, Math.Min(dimensions.Height, ThumbnailDecodeWidth), BitmapInterpolationMode.MediumQuality);
+        return new PreparedBitmap(thumbnail, new PixelSize(dimensions.Width, dimensions.Height));
+    }
+
+    private sealed record PreparedBitmap(Bitmap Thumbnail, PixelSize SourcePixelSize);
 
     private void SetPreview(EditorFrame? frame)
     {
@@ -518,6 +241,38 @@ public partial class MainWindow : Window
             return true;
 
         SetStatus("Delay must be a positive whole number of milliseconds.");
+        return false;
+    }
+
+    private bool TryPositive(string text, string name, out int value)
+    {
+        if (int.TryParse(text, out value) && value > 0)
+            return true;
+
+        SetStatus($"{name} must be a positive whole number.");
+        return false;
+    }
+
+    private bool TryNonNegative(string text, string name, out int value)
+    {
+        if (int.TryParse(text, out value) && value >= 0)
+            return true;
+
+        SetStatus($"{name} cannot be negative.");
+        return false;
+    }
+
+    private bool TryTransformDimension(
+        string text,
+        string name,
+        out int value,
+        int maximum = FrameTransformService.MaximumDimension)
+    {
+        if (TryPositive(text, name, out value) && value <= maximum)
+            return true;
+
+        if (value > maximum)
+            SetStatus($"{name} must be at most {maximum} pixels.");
         return false;
     }
 
@@ -561,49 +316,82 @@ public partial class MainWindow : Window
     private EditorFrame[] GetSelectedFrames() =>
         FrameListBox.SelectedItems?.OfType<EditorFrame>().ToArray() ?? [];
 
-    private void RestoreSelection(IEnumerable<EditorFrame> frames)
+    private int[] SelectedIndices() =>
+        GetSelectedFrames().Select(frame => _frames.IndexOf(frame)).Where(index => index >= 0).Distinct().Order().ToArray();
+
+    private EditorSnapshot CaptureSnapshot() => EditorSnapshot.Capture(
+        _frames,
+        GetSelectedFrames().Select(frame => _frames.IndexOf(frame)).Where(index => index >= 0));
+
+    private void MarkClean() => _mutations.MarkClean();
+
+    private void UpdateDirtyState() => _mutations.Refresh();
+
+    private void CommitEditorMutation(string description, EditorSnapshot before, string successMessage)
     {
-        var selectedItems = FrameListBox.SelectedItems;
-        if (selectedItems is null)
-            return;
+        _mutations.Commit(description, before);
+        SetStatus(successMessage);
+    }
 
-        selectedItems.Clear();
-
-        foreach (var frame in frames)
-            selectedItems.Add(frame);
-
+    private void RefreshEditorAfterMutation()
+    {
+        HistoryStateChanged?.Invoke();
         UpdateFrameInfo();
-    }
-
-    private void PreviewTimerTick(object? sender, EventArgs e)
-    {
-        if (!_isPlaying || _frames.Count == 0)
-        {
-            StopPreview();
-            return;
-        }
-
-        if (_previewIndex >= _frames.Count)
-            _previewIndex = 0;
-
-        var frame = _frames[_previewIndex];
-        FrameListBox.SelectedIndex = _previewIndex;
-        SetPreview(frame);
-        _previewTimer.Interval = TimeSpan.FromMilliseconds(frame.DelayMs);
-        _previewTimer.Start();
-        _previewIndex = (_previewIndex + 1) % _frames.Count;
-    }
-
-    private void StopPreview()
-    {
-        _isPlaying = false;
-        _previewTimer.Stop();
+        UpdateCurrentFramePreview();
     }
 
     private void SetStatus(string message)
     {
         StatusText.Text = message;
-        StatusText.Foreground = null;
+        StatusText.ClearValue(TextBlock.ForegroundProperty);
+    }
+
+    private void SetCurrentFrameIndex(int index)
+    {
+        if (_currentFrame is not null)
+            _currentFrame.IsCurrent = false;
+        _currentFrameIndex = index >= 0 && index < _frames.Count ? index : -1;
+        _currentFrame = _currentFrameIndex >= 0 ? _frames[_currentFrameIndex] : null;
+        if (_currentFrame is not null)
+            _currentFrame.IsCurrent = true;
+    }
+
+    private void StopPreview() => _stopActivePreview();
+
+    private async Task RunOperationAsync(string description, Func<CancellationToken, Task> operation)
+    {
+        var result = await _operations.RunAsync(operation, BeginOperationUi, EndOperationUi);
+        switch (result.Status)
+        {
+            case EditorOperationStatus.Busy:
+                SetStatus("Another operation is still running. Use Stop to cancel it first.");
+                break;
+            case EditorOperationStatus.Canceled:
+                PruneUnreachableGeneratedFiles();
+                SetStatus($"{description} canceled; the prior editor state was preserved.");
+                break;
+            case EditorOperationStatus.Failed:
+                PruneUnreachableGeneratedFiles();
+                SetError(result.Error!);
+                break;
+        }
+        if (result.CloseRequested)
+            Dispatcher.UIThread.Post(Close);
+    }
+
+    private void BeginOperationUi()
+    {
+        StopPreview();
+        RibbonTabControl.IsEnabled = false;
+        FrameListBox.IsEnabled = false;
+        OperationStateChanged?.Invoke();
+    }
+
+    private void EndOperationUi()
+    {
+        RibbonTabControl.IsEnabled = true;
+        FrameListBox.IsEnabled = true;
+        OperationStateChanged?.Invoke();
     }
 
     private void UpdateFrameInfo()
@@ -613,26 +401,38 @@ public partial class MainWindow : Window
 
         FrameCountText.Text = _frames.Count.ToString();
         SelectedCountText.Text = GetSelectedFrames().Length.ToString();
-        CurrentFrameText.Text = FrameListBox.SelectedIndex >= 0
-            ? (FrameListBox.SelectedIndex + 1).ToString()
+        CurrentFrameText.Text = _currentFrameIndex >= 0
+            ? (_currentFrameIndex + 1).ToString()
             : "—";
+
+        FrameInfoUpdated?.Invoke();
     }
 
     private void SetError(Exception exception)
     {
-        StatusText.Text = $"Error: {exception.Message}";
+        var detail = exception.Message.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+            ?? "The operation failed.";
+        if (detail.Length > 240)
+            detail = $"{detail[..237]}...";
+        StatusText.Text = $"Error: {detail}";
         StatusText.Foreground = Avalonia.Media.Brushes.IndianRed;
     }
 
     private void CleanupWorkspaces()
     {
-        StopPreview();
+        CleanupRequested?.Invoke();
+        _operations.RequestCancellation();
         _previewBitmap?.Dispose();
 
         foreach (var frame in _frames)
             frame.Dispose();
 
-        foreach (var workspace in _workspaces.Distinct(StringComparer.Ordinal))
-            ProjectArchive.TryDeleteWorkspace(workspace);
+        _workspace.Dispose();
+    }
+
+    private void PruneUnreachableGeneratedFiles()
+    {
+        var referenced = _history.ReferencedFiles().Concat(_frames.Select(frame => frame.FilePath));
+        _workspace.PruneUnreachable(referenced);
     }
 }

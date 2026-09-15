@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Media.Imaging;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -64,6 +65,24 @@ public sealed class EditorFrame : INotifyPropertyChanged, IDisposable
         {
             _thumbnail?.Dispose();
             _thumbnail = value;
+            OnPropertyChanged();
+        }
+    }
+
+    [JsonIgnore]
+    public PixelSize SourcePixelSize { get; set; }
+
+    private bool _isCurrent;
+
+    [JsonIgnore]
+    public bool IsCurrent
+    {
+        get => _isCurrent;
+        set
+        {
+            if (_isCurrent == value)
+                return;
+            _isCurrent = value;
             OnPropertyChanged();
         }
     }

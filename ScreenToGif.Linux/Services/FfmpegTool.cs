@@ -5,7 +5,15 @@ namespace ScreenToGif.Linux.Services;
 
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
-public sealed class FfmpegTool
+public interface IFfmpegTool
+{
+    Task<ProcessResult> RunFfmpegAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default);
+    Task<ProcessResult> RunFfprobeAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default);
+    Task RunFfmpegCheckedAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default);
+    Task<ProcessResult> RunFfprobeCheckedAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default);
+}
+
+public sealed class FfmpegTool : IFfmpegTool
 {
     public Task<ProcessResult> RunFfmpegAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default) =>
         RunAsync(Resolve("SCREENTOGIF_FFMPEG", "ffmpeg"), arguments, cancellationToken);
@@ -61,7 +69,17 @@ public sealed class FfmpegTool
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
 
-        await process.WaitForExitAsync(cancellationToken);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+            await process.WaitForExitAsync(CancellationToken.None);
+            throw;
+        }
 
         return new ProcessResult(process.ExitCode, await outputTask, await errorTask);
     }

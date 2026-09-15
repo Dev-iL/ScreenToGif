@@ -5,6 +5,9 @@ imports media, edits a frame timeline, saves `.stg-linux` projects, and exports
 GIF, APNG, MP4, and WebM. The original `GifRecorder.sln` remains the Windows
 application.
 
+Detailed behavior and limits for each ribbon tab are documented in
+[`docs/editor`](docs/editor/).
+
 ## Requirements
 
 To build from source, install:
@@ -100,4 +103,5 @@ an already-built executable instead, run:
 Recorder, Webcam, Board, and Options remain visible but disabled while their
 Linux implementations are pending. Windows `.stg` compatibility, desktop
 capture, and the Windows editor's advanced annotation/effects commands are not
-part of this Linux application yet.
+part of this Linux application yet; their disabled ribbon controls explain the
+missing subsystem in a tooltip.
