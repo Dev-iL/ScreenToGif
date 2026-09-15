@@ -106,20 +106,20 @@
                         <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,7,Auto,7,Auto,*">
                             <Grid Grid.Column="0" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" RowDefinitions="*,16">
                                 <controls:RibbonButton Grid.Column="0" Label="Delete" IconKind="Cancel" Click="DeleteFrameClick" />
-                                <controls:RibbonButton Grid.Column="1" Label="Duplicates" IconKind="Cancel" IsEnabled="False" />
-                                <controls:RibbonButton Grid.Column="2" Label="Reduce" IconKind="Cancel" IsEnabled="False" />
-                                <controls:RibbonButton Grid.Column="3" Label="Smooth&#xA;loop" IconKind="Repeat" IsEnabled="False" />
+                                <controls:RibbonButton Grid.Column="1" Label="Duplicates" IconKind="Cancel" Click="RemoveDuplicatesClick" />
+                                <controls:RibbonButton Grid.Column="2" Label="Reduce" IconKind="Cancel" Click="ReduceClick" />
+                                <controls:RibbonButton Grid.Column="3" Label="Smooth&#xA;loop" IconKind="Repeat" Click="SmoothLoopClick" />
                                 <Grid Grid.Column="4" RowDefinitions="*,*">
-                                    <controls:RibbonButton Classes="compact" Label="Delete before" IconKind="ArrowTop" IsEnabled="False" />
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Delete after" IconKind="ArrowBottom" IsEnabled="False" />
+                                    <controls:RibbonButton Classes="compact" Label="Delete before" IconKind="ArrowTop" Click="DeleteBeforeClick" />
+                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Delete after" IconKind="ArrowBottom" Click="DeleteAfterClick" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Classes="ribbon-group-label" Text="Frames" />
                             </Grid>
                             <Border Grid.Column="1" Width="1" Background="#45484E" Margin="3,2" />
                             <Grid Grid.Column="2" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="*,16">
                                 <Grid Grid.Column="0" RowDefinitions="*,*">
-                                    <controls:RibbonButton Classes="compact" Label="Reverse" IconKind="Inverse" IsEnabled="False" />
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Yoyo" IconKind="Repeat" IsEnabled="False" />
+                                    <controls:RibbonButton Classes="compact" Label="Reverse" IconKind="Inverse" Click="ReverseClick" />
+                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Yoyo" IconKind="Repeat" Click="YoyoClick" />
                                 </Grid>
                                 <controls:RibbonButton Grid.Column="1" Label="Move left" IconKind="Previous" Click="MoveUpClick" />
                                 <controls:RibbonButton Grid.Column="2" Label="Move right" IconKind="Next" Click="MoveDownClick" />
