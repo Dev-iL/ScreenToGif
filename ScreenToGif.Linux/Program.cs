@@ -1,4 +1,5 @@
 using Avalonia;
+using ScreenToGif.Linux.Services;
 
 namespace ScreenToGif.Linux;
 
@@ -9,6 +10,7 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        ProjectArchive.ScavengeStaleWorkspaces();
         if (args.Any(arg => arg is "--help" or "-h"))
         {
             Console.WriteLine("ScreenToGif Linux editor");

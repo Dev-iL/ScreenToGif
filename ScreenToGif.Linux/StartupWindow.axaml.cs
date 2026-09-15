@@ -21,7 +21,7 @@ public partial class StartupWindow : Window
             return;
 
         _openingEditor = true;
-        var editor = new MainWindow();
+        var editor = App.CreateEditorWindow();
         editor.Closed += (_, _) => desktop.Shutdown();
         desktop.MainWindow = editor;
         editor.Show();

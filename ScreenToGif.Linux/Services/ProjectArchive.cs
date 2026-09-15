@@ -1,13 +1,43 @@
 using ScreenToGif.Linux.Models;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
 
 namespace ScreenToGif.Linux.Services;
 
-public sealed record LoadedProject(string WorkspacePath, IReadOnlyList<EditorFrame> Frames);
+public sealed record EditorProjectContent(EditorWorkspace Workspace, IReadOnlyList<EditorFrame> Frames);
+
+public sealed class LoadedProject(EditorWorkspace workspace, IReadOnlyList<EditorFrame> frames) : IDisposable
+{
+    private bool _transferred;
+
+    public EditorWorkspace Workspace { get; } = workspace;
+    public IReadOnlyList<EditorFrame> Frames { get; } = frames;
+
+    public EditorProjectContent TransferOwnership()
+    {
+        ObjectDisposedException.ThrowIf(_transferred, this);
+        _transferred = true;
+        return new EditorProjectContent(Workspace, Frames);
+    }
+
+    public void Dispose()
+    {
+        if (_transferred)
+            return;
+        _transferred = true;
+        foreach (var frame in Frames)
+            frame.Dispose();
+        Workspace.Dispose();
+    }
+}
 
 public static class ProjectArchive
 {
+    private const string WorkspaceRootName = "screentogif-linux";
+    private const string OwnerFileName = ".owner";
+    private const int CurrentSchemaVersion = 1;
+    private const int MaximumArchiveEntries = EditorResourceLimits.MaximumProjectFrames + 2;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static async Task SaveAsync(string archivePath, IEnumerable<EditorFrame> sourceFrames, CancellationToken cancellationToken = default)
@@ -16,16 +46,41 @@ public static class ProjectArchive
 
         if (frames.Length == 0)
             throw new InvalidOperationException("There are no frames to save.");
+        await ValidateFramesForSaveAsync(frames, cancellationToken);
 
-        await using var stream = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None);
+        var fullPath = Path.GetFullPath(archivePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        var temporaryPath = $"{fullPath}.{Guid.NewGuid():N}.tmp";
+
+        try
+        {
+            await SaveCoreAsync(temporaryPath, frames, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryPath, fullPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
+
+    private static async Task SaveCoreAsync(string archivePath, IReadOnlyList<EditorFrame> frames, CancellationToken cancellationToken)
+    {
+        await using var stream = new FileStream(
+            archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
         using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+        var archiveFrames = frames.Select((frame, index) => (
+            Frame: frame,
+            Path: $"frames/{index:000000}.png")).ToArray();
 
         var manifest = new LinuxProjectManifest
         {
-            Frames = frames.Select((frame, index) => new LinuxProjectFrame
+            Frames = archiveFrames.Select(entry => (LinuxProjectFrame?)new LinuxProjectFrame
             {
-                Path = $"frames/{index:000000}.png",
-                DelayMs = frame.DelayMs
+                Path = entry.Path,
+                DelayMs = entry.Frame.DelayMs
             }).ToList()
         };
 
@@ -33,11 +88,27 @@ public static class ProjectArchive
         await using (var manifestStream = manifestEntry.Open())
             await JsonSerializer.SerializeAsync(manifestStream, manifest, JsonOptions, cancellationToken);
 
-        foreach (var (frame, manifestFrame) in frames.Zip(manifest.Frames))
+        foreach (var entry in archiveFrames)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            archive.CreateEntryFromFile(frame.FilePath, manifestFrame.Path, CompressionLevel.Fastest);
+            var archiveEntry = archive.CreateEntry(entry.Path, CompressionLevel.Fastest);
+            await using var source = new FileStream(
+                entry.Frame.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            await using var destination = archiveEntry.Open();
+            await source.CopyToAsync(destination, 81920, cancellationToken);
         }
+    }
+
+    private static async Task ValidateFramesForSaveAsync(
+        IReadOnlyCollection<EditorFrame> frames,
+        CancellationToken cancellationToken)
+    {
+        if (frames.Count > EditorResourceLimits.MaximumProjectFrames)
+            throw new InvalidOperationException($"A project cannot contain more than {EditorResourceLimits.MaximumProjectFrames} frames.");
+
+        await EditorProjectBudget.EnsureTimelineBudgetAsync(
+            frames.Select(frame => frame.FilePath), "The project", cancellationToken);
     }
 
     public static async Task<LoadedProject> LoadAsync(string archivePath, CancellationToken cancellationToken = default)
@@ -45,19 +116,42 @@ public static class ProjectArchive
         if (!File.Exists(archivePath))
             throw new FileNotFoundException("Project archive was not found.", archivePath);
 
-        var workspacePath = CreateWorkspace();
+        var workspace = CreateWorkspace();
 
         try
         {
-            await ExtractAsync(archivePath, workspacePath, cancellationToken);
+            await ExtractAsync(archivePath, workspace.RootPath, cancellationToken);
 
-            var manifestPath = Path.Combine(workspacePath, "project.json");
-            var manifest = JsonSerializer.Deserialize<LinuxProjectManifest>(await File.ReadAllTextAsync(manifestPath, cancellationToken), JsonOptions)
-                ?? throw new InvalidDataException("The project manifest is empty.");
+            var manifestPath = Path.Combine(workspace.RootPath, "project.json");
+            if (!File.Exists(manifestPath))
+                throw new InvalidDataException("The project archive is missing project.json.");
+            LinuxProjectManifest manifest;
+            try
+            {
+                manifest = JsonSerializer.Deserialize<LinuxProjectManifest>(
+                    await File.ReadAllTextAsync(manifestPath, cancellationToken), JsonOptions)
+                    ?? throw new InvalidDataException("The project manifest is empty.");
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidDataException("The project manifest is not valid JSON.", ex);
+            }
+
+            if (manifest.Frames is null)
+                throw new InvalidDataException("The project manifest does not contain a frame list.");
+            if (manifest.Version != CurrentSchemaVersion)
+                throw new InvalidDataException(
+                    $"Project version {manifest.Version} is not supported; this editor supports version {CurrentSchemaVersion}.");
+            if (manifest.Frames.Count > EditorResourceLimits.MaximumProjectFrames)
+                throw new InvalidDataException($"The project contains more than {EditorResourceLimits.MaximumProjectFrames} frames.");
 
             var frames = manifest.Frames.Select(frame =>
             {
-                var path = SafePath(workspacePath, frame.Path);
+                if (frame is null || string.IsNullOrWhiteSpace(frame.Path))
+                    throw new InvalidDataException("The project contains an invalid frame entry.");
+                if (frame.DelayMs <= 0)
+                    throw new InvalidDataException("The project contains a frame with an invalid delay.");
+                var path = SafePath(workspace.RootPath, frame.Path);
 
                 if (!File.Exists(path))
                     throw new InvalidDataException($"The project is missing frame '{frame.Path}'.");
@@ -68,23 +162,67 @@ public static class ProjectArchive
             if (frames.Length == 0)
                 throw new InvalidDataException("The project contains no frames.");
 
-            return new LoadedProject(workspacePath, frames);
+            try
+            {
+                await Task.Run(
+                    () => EditorProjectBudget.EnsureDecodedPixelBudget(
+                        frames.Select(frame => frame.FilePath), "The project", cancellationToken),
+                    cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidDataException(ex.Message, ex);
+            }
+
+            return new LoadedProject(workspace, frames);
         }
         catch
         {
-            TryDeleteWorkspace(workspacePath);
+            workspace.Dispose();
             throw;
         }
     }
 
-    public static string CreateWorkspace()
+    public static EditorWorkspace CreateWorkspace() => EditorWorkspace.Create();
+
+    public static void ScavengeStaleWorkspaces()
     {
-        var path = Path.Combine(Path.GetTempPath(), "screentogif-linux", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
+        try
+        {
+            var root = Path.Combine(Path.GetTempPath(), WorkspaceRootName);
+            if (!Directory.Exists(root))
+                return;
+            foreach (var path in Directory.EnumerateDirectories(root))
+            {
+                if (IsOwnedByLiveProcess(path))
+                    continue;
+                var ownerPath = Path.Combine(path, OwnerFileName);
+                if (!File.Exists(ownerPath) && Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-1))
+                    continue;
+                TryDeleteWorkspace(path);
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
-    public static void TryDeleteWorkspace(string? workspacePath)
+    private static bool IsOwnedByLiveProcess(string workspacePath)
+    {
+        try
+        {
+            var parts = File.ReadAllText(Path.Combine(workspacePath, OwnerFileName)).Split('|');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out var processId) || !long.TryParse(parts[1], out var startTicks))
+                return false;
+            using var process = Process.GetProcessById(processId);
+            return process.StartTime.ToUniversalTime().Ticks == startTicks && !process.HasExited;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    internal static void TryDeleteWorkspace(string? workspacePath)
     {
         if (string.IsNullOrWhiteSpace(workspacePath) || !Directory.Exists(workspacePath))
             return;
@@ -108,11 +246,34 @@ public static class ProjectArchive
         await using var stream = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
 
+        if (archive.Entries.Count > MaximumArchiveEntries)
+            throw new InvalidDataException($"The project contains too many archive entries; the limit is {MaximumArchiveEntries}.");
+
+        var destinations = new HashSet<string>(StringComparer.Ordinal);
+        long declaredBytes = 0;
+        foreach (var entry in archive.Entries)
+        {
+            var path = ValidateArchiveEntry(entry, workspacePath);
+            if (!destinations.Add(path))
+                throw new InvalidDataException($"The project contains duplicate archive path '{entry.FullName}'.");
+            if (entry.FullName.EndsWith("/", StringComparison.Ordinal))
+                continue;
+            var entryLimit = IsManifestPath(path, workspacePath)
+                ? EditorResourceLimits.MaximumProjectManifestBytes
+                : EditorResourceLimits.MaximumProjectFrameBytes;
+            if (entry.Length > entryLimit)
+                throw new InvalidDataException($"The project archive entry '{entry.FullName}' is too large.");
+            if (entry.Length > EditorResourceLimits.MaximumProjectArchiveBytes - declaredBytes)
+                throw new InvalidDataException("The project archive expands beyond the supported size limit.");
+            declaredBytes += entry.Length;
+        }
+
+        long extractedBytes = 0;
         foreach (var entry in archive.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var path = SafePath(workspacePath, entry.FullName);
+            var path = ValidateArchiveEntry(entry, workspacePath);
 
             if (entry.FullName.EndsWith("/", StringComparison.Ordinal))
             {
@@ -123,7 +284,54 @@ public static class ProjectArchive
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             await using var input = entry.Open();
             await using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
-            await input.CopyToAsync(output, cancellationToken);
+            var entryLimit = IsManifestPath(path, workspacePath)
+                ? EditorResourceLimits.MaximumProjectManifestBytes
+                : EditorResourceLimits.MaximumProjectFrameBytes;
+            extractedBytes += await CopyBoundedAsync(
+                input, output, entryLimit,
+                EditorResourceLimits.MaximumProjectArchiveBytes - extractedBytes, cancellationToken);
+        }
+    }
+
+    private static string ValidateArchiveEntry(ZipArchiveEntry entry, string workspacePath)
+    {
+        var path = SafePath(workspacePath, entry.FullName);
+        if (string.Equals(path, Path.Combine(workspacePath, OwnerFileName), StringComparison.Ordinal))
+            throw new InvalidDataException("The project contains a reserved workspace path.");
+
+        var relativePath = Path.GetRelativePath(workspacePath, path).Replace(Path.DirectorySeparatorChar, '/');
+        var isDirectory = entry.FullName.EndsWith("/", StringComparison.Ordinal);
+        var isManifest = string.Equals(relativePath, "project.json", StringComparison.Ordinal);
+        var isFramesPath = string.Equals(relativePath, "frames", StringComparison.Ordinal) ||
+                           relativePath.StartsWith("frames/", StringComparison.Ordinal);
+        var isFrame = !isDirectory && isFramesPath &&
+                      string.Equals(Path.GetExtension(relativePath), ".png", StringComparison.OrdinalIgnoreCase);
+        if (!(isManifest || isFrame || isDirectory && isFramesPath))
+            throw new InvalidDataException($"The project contains unsupported archive path '{entry.FullName}'.");
+        return path;
+    }
+
+    private static bool IsManifestPath(string path, string workspacePath) =>
+        string.Equals(path, Path.Combine(workspacePath, "project.json"), StringComparison.Ordinal);
+
+    private static async Task<long> CopyBoundedAsync(
+        Stream input,
+        Stream output,
+        long entryLimit,
+        long aggregateRemaining,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new byte[81920];
+        long written = 0;
+        while (true)
+        {
+            var read = await input.ReadAsync(buffer, cancellationToken);
+            if (read == 0)
+                return written;
+            if (written + read > entryLimit || written + read > aggregateRemaining)
+                throw new InvalidDataException("The project archive expands beyond the supported size limit.");
+            await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            written += read;
         }
     }
 
@@ -140,13 +348,13 @@ public static class ProjectArchive
 
     private sealed class LinuxProjectManifest
     {
-        public int Version { get; set; } = 1;
-        public List<LinuxProjectFrame> Frames { get; set; } = [];
+        public int Version { get; set; } = CurrentSchemaVersion;
+        public List<LinuxProjectFrame?>? Frames { get; set; } = [];
     }
 
     private sealed class LinuxProjectFrame
     {
-        public string Path { get; set; } = string.Empty;
+        public string? Path { get; set; }
         public int DelayMs { get; set; } = 100;
     }
 }

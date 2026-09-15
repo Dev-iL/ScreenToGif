@@ -30,7 +30,7 @@ publish: restore
 	$(DOTNET) publish $(PROJECT) --configuration $(CONFIGURATION) --no-restore --output $(PUBLISH_DIR)
 
 install-desktop: publish
-	./scripts/install-desktop-entry.sh $(APP)
+	./scripts/install-desktop-entry.sh "$(APP)"
 
 clean:
 	$(DOTNET) clean $(SOLUTION) --configuration $(CONFIGURATION)

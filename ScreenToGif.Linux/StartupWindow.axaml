@@ -14,6 +14,9 @@
         Icon="/Resources/Logo.ico"
         Background="#1E1F22">
     <Window.Styles>
+        <Style Selector="Button:disabled">
+            <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+        </Style>
         <Style Selector="Button.shortcut">
             <Setter Property="Margin" Value="5,0,5,5" />
             <Setter Property="Padding" Value="4" />
