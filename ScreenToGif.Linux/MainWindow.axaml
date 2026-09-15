@@ -44,39 +44,39 @@
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                         <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,7,Auto,7,Auto,7,Auto,*">
                             <Grid Grid.Column="0" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto" RowDefinitions="*,16">
-                                <controls:RibbonButton Grid.Column="0" Label="Undo" IconKind="Undo" MinWidth="55" Click="UndoDeleteClick" />
+                                <controls:RibbonButton x:Name="UndoButton" Grid.Column="0" Label="Undo" IconKind="Undo" MinWidth="55" Click="UndoClick" />
                                 <Grid Grid.Column="1" RowDefinitions="*,*">
-                                    <controls:RibbonButton Classes="compact" Label="Reset" IconKind="Repeat" IsEnabled="False" />
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Redo" IconKind="Redo" IsEnabled="False" />
+                                    <controls:RibbonButton Classes="compact" Label="Reset" IconKind="Repeat" Click="ResetClick" />
+                                    <controls:RibbonButton x:Name="RedoButton" Grid.Row="1" Classes="compact" Label="Redo" IconKind="Redo" Click="RedoClick" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="ribbon-group-label" Text="Action stack" />
                             </Grid>
                             <Border Grid.Column="1" Width="1" Background="#45484E" Margin="3,2" />
                             <Grid Grid.Column="2" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto" RowDefinitions="*,16">
-                                <controls:RibbonButton Grid.Column="0" Label="Paste" IconKind="Paste" MinWidth="55" IsEnabled="False" />
+                                <controls:RibbonButton Grid.Column="0" Label="Paste" IconKind="Paste" MinWidth="55" Click="PasteClick" />
                                 <Grid Grid.Column="1" RowDefinitions="*,*">
-                                    <controls:RibbonButton Classes="compact" Label="Copy" IconKind="Copy" IsEnabled="False" />
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Cut" IconKind="Cut" IsEnabled="False" />
+                                    <controls:RibbonButton Classes="compact" Label="Copy" IconKind="Copy" Click="CopyClick" />
+                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Cut" IconKind="Cut" Click="CutClick" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="ribbon-group-label" Text="Clipboard" />
                             </Grid>
                             <Border Grid.Column="3" Width="1" Background="#45484E" Margin="3,2" />
                             <Grid Grid.Column="4" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="*,16">
-                                <controls:RibbonButton Grid.Column="0" Label="100%" IconKind="Fit" MinWidth="55" IsEnabled="False" />
-                                <controls:RibbonButton Grid.Column="1" Label="Size to&#xA;content" IconKind="SizeToContent" MinWidth="55" IsEnabled="False" />
+                                <controls:RibbonButton Grid.Column="0" Label="100%" IconKind="Fit" MinWidth="55" Click="ActualSizeClick" />
+                                <controls:RibbonButton Grid.Column="1" Label="Size to&#xA;content" IconKind="SizeToContent" MinWidth="55" Click="SizeToContentClick" />
                                 <Grid Grid.Column="2" RowDefinitions="*,*">
-                                    <StackPanel Orientation="Horizontal" Margin="0,5" IsEnabled="False"><icons:WindowsIcon Kind="Zoom" Width="22" Height="22" /><TextBox Width="60" Height="25" Margin="5,0,0,0" Text="100" /><TextBlock Text="%" Margin="3,0" VerticalAlignment="Center" /></StackPanel>
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Fit image" IconKind="PictureFit" IsEnabled="False" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,5"><icons:WindowsIcon Kind="Zoom" Width="22" Height="22" /><TextBox x:Name="ZoomTextBox" Width="60" Height="25" Margin="5,0,0,0" Text="100" KeyDown="ZoomKeyDown" LostFocus="ZoomLostFocus" /><TextBlock Text="%" Margin="3,0" VerticalAlignment="Center" /></StackPanel>
+                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Fit image" IconKind="PictureFit" Click="FitImageClick" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="ribbon-group-label" Text="Zoom" />
                             </Grid>
                             <Border Grid.Column="5" Width="1" Background="#45484E" Margin="3,2" />
                             <Grid Grid.Column="6" Margin="0,1,0,0" ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="*,16">
-                                <controls:RibbonButton Grid.Column="0" Label="Select all" IconKind="Cursor" MinWidth="55" IsEnabled="False" />
-                                <controls:RibbonButton Grid.Column="1" Label="Go to" IconKind="Forward" MinWidth="55" IsEnabled="False" />
+                                <controls:RibbonButton Grid.Column="0" Label="Select all" IconKind="Cursor" MinWidth="55" Click="SelectAllClick" />
+                                <controls:RibbonButton Grid.Column="1" Label="Go to" IconKind="Forward" MinWidth="55" Click="GoToClick" />
                                 <Grid Grid.Column="2" RowDefinitions="*,*">
-                                    <controls:RibbonButton Classes="compact" Label="Inverse" IconKind="Inverse" IsEnabled="False" />
-                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Deselect" IconKind="Unselect" IsEnabled="False" />
+                                    <controls:RibbonButton Classes="compact" Label="Inverse" IconKind="Inverse" Click="InverseSelectionClick" />
+                                    <controls:RibbonButton Grid.Row="1" Classes="compact" Label="Deselect" IconKind="Unselect" Click="DeselectClick" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="ribbon-group-label" Text="Select" />
                             </Grid>
