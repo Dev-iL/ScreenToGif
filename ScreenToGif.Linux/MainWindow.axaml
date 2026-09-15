@@ -162,7 +162,15 @@
                     <StackPanel Orientation="Horizontal" Height="94" Margin="2" Background="#2B2E32"><Border Classes="ribbon-group"><Grid RowDefinitions="*,16"><StackPanel Orientation="Horizontal"><controls:RibbonButton Label="Fade" IconKind="Fade" Click="FadeClick" /><controls:RibbonButton Label="Slide" IconKind="Slide" Click="SlideClick" /></StackPanel><TextBlock Grid.Row="1" Classes="ribbon-group-label" Text="Transitions" /></Grid></Border></StackPanel>
                 </controls:RibbonTabItem>
                 <controls:RibbonTabItem Header="Statistics" IconKind="Zoom">
-                    <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,24,Auto,24,Auto"><StackPanel Margin="12,10"><TextBlock Text="Frames" Foreground="#9299A2" /><TextBlock Text="Current editor statistics" FontSize="16" /></StackPanel><StackPanel Grid.Column="2" Margin="12,10"><TextBlock Text="Selection" Foreground="#9299A2" /><TextBlock Text="See status bar" FontSize="16" /></StackPanel></Grid>
+                    <Grid Height="94" Margin="2" Background="#2B2E32" ColumnDefinitions="Auto,12,Auto,12,Auto,12,Auto">
+                        <StackPanel Margin="12,7"><TextBlock Text="Timeline" Foreground="#9299A2" /><TextBlock><Run Text="Frames  " /><Run x:Name="StatsFrameCount" Text="0" /></TextBlock><TextBlock><Run Text="Duration  " /><Run x:Name="StatsDuration" Text="0 ms" /></TextBlock></StackPanel>
+                        <Border Grid.Column="1" Width="1" Background="#45484E" Margin="5,8" />
+                        <StackPanel Grid.Column="2" Margin="12,7"><TextBlock Text="Image" Foreground="#9299A2" /><TextBlock><Run Text="Size  " /><Run x:Name="StatsDimensions" Text="—" /></TextBlock><TextBlock><Run Text="Scale  " /><Run x:Name="StatsScale" Text="100%" /></TextBlock></StackPanel>
+                        <Border Grid.Column="3" Width="1" Background="#45484E" Margin="5,8" />
+                        <StackPanel Grid.Column="4" Margin="12,7"><TextBlock Text="Timing" Foreground="#9299A2" /><TextBlock><Run Text="Current  " /><Run x:Name="StatsCurrentTime" Text="—" /></TextBlock><TextBlock><Run Text="Average  " /><Run x:Name="StatsAverageDelay" Text="—" /></TextBlock></StackPanel>
+                        <Border Grid.Column="5" Width="1" Background="#45484E" Margin="5,8" />
+                        <StackPanel Grid.Column="6" Margin="12,7"><TextBlock Text="Selection" Foreground="#9299A2" /><TextBlock Text="Selected delay" /><TextBlock x:Name="StatsSelectedDelay" Text="—" FontSize="16" /></StackPanel>
+                    </Grid>
                 </controls:RibbonTabItem>
             </TabControl>
         </Grid>
