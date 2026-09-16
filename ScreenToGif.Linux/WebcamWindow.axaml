@@ -1,0 +1,65 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ScreenToGif.Linux.Controls"
+        xmlns:icons="using:ScreenToGif.Linux"
+        x:Class="ScreenToGif.Linux.WebcamWindow"
+        Classes="capture-shell"
+        Title="ScreenToGif - Webcam Recorder"
+        Width="600"
+        Height="400"
+        MinWidth="600"
+        MinHeight="400"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Resources/Logo.ico">
+    <Grid RowDefinitions="*,31">
+        <Border Grid.Row="0" Background="#202225" BorderBrush="#555A60" BorderThickness="1">
+            <TextBlock Text="No video device detected :("
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="24"
+                       Foreground="#72A7E8" />
+        </Border>
+
+        <Border Grid.Row="1" Background="#25272A" BorderBrush="#555A60" BorderThickness="1,1,1,0">
+            <Grid Height="31" ColumnDefinitions="30,28,28,28,*,11,31,47,Auto,11,Auto,Auto">
+                <Button x:Name="OptionsButton" Grid.Column="1" Classes="capture-tool" IsEnabled="False"
+                        ToolTip.Tip="Webcam Options navigation is not available in this GUI scaffold.">
+                    <icons:WindowsIcon Kind="Options" Width="20" Height="20" />
+                </Button>
+                <Button x:Name="ScaleButton" Grid.Column="2" Classes="capture-tool" IsEnabled="False"
+                        ToolTip.Tip="Preview scaling requires a camera-preview subsystem.">
+                    <icons:WindowsIcon Kind="Resize" Width="20" Height="20" />
+                </Button>
+                <Button x:Name="RefreshButton" Grid.Column="3" Classes="capture-tool" IsEnabled="False"
+                        ToolTip.Tip="Camera discovery is not available in this GUI scaffold.">
+                    <icons:WindowsIcon Kind="Repeat" Width="20" Height="20" />
+                </Button>
+                <ComboBox x:Name="DeviceSelector" Grid.Column="4" MinWidth="120" Height="24" Margin="0,3" IsEnabled="False"
+                          ToolTip.Tip="No camera devices are queried until camera discovery is implemented." />
+                <Border Grid.Column="5" Classes="capture-separator" />
+                <Border Grid.Column="6" ToolTip.Tip="Capture frequency will be available with webcam recording.">
+                    <controls:FrequencyIndicator Margin="1" />
+                </Border>
+                <controls:ScaffoldNumericField x:Name="FrequencyInput" Grid.Column="7" Width="45" Margin="1,3" Value="15" IsEnabled="False"
+                                               ToolTip.Tip="Capture frequency cannot be changed until webcam recording is implemented." />
+                <TextBlock Grid.Column="8" Text="fps" FontSize="12" Margin="1,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                <Border Grid.Column="9" Classes="capture-separator" />
+                <Button x:Name="RecordButton" Grid.Column="10" Classes="capture-command" IsEnabled="False"
+                        ToolTip.Tip="Webcam recording requires camera discovery and preview support.">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <icons:WindowsIcon Kind="Record" Width="16" Height="16" />
+                        <TextBlock Text="Record&#xA;F7" FontSize="11" TextAlignment="Right" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="StopButton" Grid.Column="11" Classes="capture-command" IsEnabled="False"
+                        ToolTip.Tip="Stopping a webcam recording is unavailable because recording is not implemented.">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <icons:WindowsIcon Kind="Stop" Width="16" Height="16" />
+                        <TextBlock Text="Stop&#xA;F8" FontSize="11" TextAlignment="Right" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

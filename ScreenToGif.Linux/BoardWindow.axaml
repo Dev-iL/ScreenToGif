@@ -1,0 +1,121 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ScreenToGif.Linux.Controls"
+        xmlns:icons="using:ScreenToGif.Linux"
+        x:Class="ScreenToGif.Linux.BoardWindow"
+        Classes="capture-shell"
+        Title="ScreenToGif - Board Recorder"
+        Width="620"
+        Height="453"
+        MinWidth="620"
+        MinHeight="453"
+        CanResize="True"
+        Topmost="True"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Resources/Logo.ico">
+    <Grid RowDefinitions="33,*,31">
+        <Border Grid.Row="0" Background="#25272A" BorderBrush="#555A60" BorderThickness="1,0,1,1">
+            <Grid Height="32" Margin="6,0" ColumnDefinitions="Auto,*,Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <ToggleButton x:Name="PenButton" Classes="capture-tool" IsChecked="True" IsEnabled="False"
+                                  ToolTip.Tip="Pen drawing requires the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="Pen" Width="20" Height="20" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="EraserButton" Classes="capture-tool" IsEnabled="False"
+                                  ToolTip.Tip="Stroke erasing requires the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="Eraser" Width="20" Height="20" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="SelectionButton" Classes="capture-tool" IsEnabled="False"
+                                  ToolTip.Tip="Object selection requires the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="Select" Width="20" Height="20" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="StrokeEraserButton" Classes="capture-tool" IsEnabled="False"
+                                  ToolTip.Tip="Whole-stroke erasing requires the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="StrokeEraser" Width="20" Height="20" />
+                    </ToggleButton>
+                    <Border Classes="capture-separator" Margin="2,3,8,3" />
+                    <Button x:Name="BrushColorButton" Classes="capture-tool" Width="44" IsEnabled="False"
+                            ToolTip.Tip="Brush color selection requires the Board authoring subsystem.">
+                        <Border Width="36" Height="23" Background="#000000" BorderBrush="#8A8E93" BorderThickness="1" />
+                    </Button>
+                    <controls:ScaffoldNumericField x:Name="BrushWidthInput" Width="56" Margin="2,3" Value="10" IsEnabled="False"
+                                                   ToolTip.Tip="Brush width requires the Board authoring subsystem." />
+                    <controls:ScaffoldNumericField x:Name="BrushHeightInput" Width="56" Margin="2,3" Value="10" IsEnabled="False"
+                                                   ToolTip.Tip="Brush height requires the Board authoring subsystem." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <ToggleButton x:Name="EllipseTipButton" Classes="capture-tool" IsChecked="True" IsEnabled="False"
+                                  ToolTip.Tip="Ellipse brush tips require the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="Ellipse" Width="20" Height="20" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="RectangleTipButton" Classes="capture-tool" IsEnabled="False"
+                                  ToolTip.Tip="Rectangle brush tips require the Board authoring subsystem.">
+                        <icons:WindowsIcon Kind="Rectangle" Width="20" Height="20" />
+                    </ToggleButton>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <CheckBox x:Name="FitToCurveCheckBox" Padding="0" FontSize="11" IsEnabled="False"
+                              ToolTip.Tip="Curve fitting requires the Board authoring subsystem.">
+                        <TextBlock Text="Fit to Curve." Margin="6,0,0,0" />
+                    </CheckBox>
+                    <CheckBox x:Name="HighlighterCheckBox" Padding="0" FontSize="11" IsEnabled="False"
+                              ToolTip.Tip="Highlighter strokes require the Board authoring subsystem.">
+                        <TextBlock Text="Highlighter." Margin="6,0,0,0" />
+                    </CheckBox>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border x:Name="BoardCanvas" Grid.Row="1" Background="#FFFFFF" BorderBrush="#8A8E93" BorderThickness="1"
+                ToolTip.Tip="The Board canvas is a visual preview; drawing and stroke editing are not available." />
+
+        <Border Grid.Row="2" Background="#25272A" BorderBrush="#555A60" BorderThickness="1,1,1,0">
+            <Grid Height="31" Margin="6,0" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto">
+                <Button x:Name="OptionsButton" Grid.Column="0" Classes="capture-tool" IsEnabled="False"
+                        ToolTip.Tip="Board Options navigation is not available in this GUI scaffold.">
+                    <icons:WindowsIcon Kind="Options" Width="20" Height="20" />
+                </Button>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Border Classes="capture-separator" />
+                    <Border ToolTip.Tip="Capture frequency will be available with Board recording.">
+                        <controls:FrequencyIndicator Margin="1" />
+                    </Border>
+                    <controls:ScaffoldNumericField x:Name="FrequencyInput" Width="56" Margin="1,3" Value="15" IsEnabled="False"
+                                                   ToolTip.Tip="Capture frequency cannot be changed until Board recording is implemented." />
+                    <TextBlock Text="fps" FontSize="12" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <Border Classes="capture-separator" />
+                    <controls:ScaffoldNumericField x:Name="BoardWidthInput" Width="56" Margin="1,3" Value="600" IsEnabled="False"
+                                                   ToolTip.Tip="Board width cannot be changed in this GUI scaffold." />
+                    <TextBlock Text="×" FontSize="15" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                    <controls:ScaffoldNumericField x:Name="BoardHeightInput" Width="56" Margin="1,3" Value="350" IsEnabled="False"
+                                                   ToolTip.Tip="Board height cannot be changed in this GUI scaffold." />
+                    <TextBlock Text="px" FontSize="12" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Classes="capture-separator" Margin="3,3" />
+                    <ToggleButton x:Name="AutoRecordButton" Classes="capture-command" Width="104" IsChecked="True" IsEnabled="False"
+                                  ToolTip.Tip="Automatic Board recording requires drawing and frame-creation support.">
+                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                            <icons:WindowsIcon Kind="Record" Width="16" Height="16" />
+                            <TextBlock Text="Auto Record" FontSize="11" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button x:Name="StopButton" Classes="capture-command" Width="64" IsEnabled="False"
+                            ToolTip.Tip="Stopping a Board recording is unavailable because recording is not implemented.">
+                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                            <icons:WindowsIcon Kind="Stop" Width="16" Height="16" />
+                            <TextBlock Text="Stop" FontSize="11" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

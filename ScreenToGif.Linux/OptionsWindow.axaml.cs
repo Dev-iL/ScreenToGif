@@ -43,7 +43,6 @@ public partial class OptionsWindow : Window
         DoubleLeftWindowComboBox.SelectedIndex = (int)_settings.DoubleLeftClickWindow;
         MiddleActionComboBox.SelectedIndex = (int)_settings.MiddleClickAction;
         MiddleWindowComboBox.SelectedIndex = (int)_settings.MiddleClickWindow;
-        NotifyBeforeClosingCheckBox.IsChecked = _settings.NotifyBeforeClosing;
         DisableHardwareAccelerationCheckBox.IsChecked = _settings.DisableHardwareAcceleration;
         AskBeforeDeleteFramesCheckBox.IsChecked = _settings.AskBeforeDeleteFrames;
         AskBeforeDiscardProjectCheckBox.IsChecked = _settings.AskBeforeDiscardProject;
@@ -160,7 +159,6 @@ public partial class OptionsWindow : Window
         _settings.DoubleLeftClickWindow = (LinuxTrayWindow)Math.Max(0, DoubleLeftWindowComboBox.SelectedIndex);
         _settings.MiddleClickAction = (LinuxTrayAction)Math.Max(0, MiddleActionComboBox.SelectedIndex);
         _settings.MiddleClickWindow = (LinuxTrayWindow)Math.Max(0, MiddleWindowComboBox.SelectedIndex);
-        _settings.NotifyBeforeClosing = NotifyBeforeClosingCheckBox.IsChecked == true;
         _settings.DisableHardwareAcceleration = DisableHardwareAccelerationCheckBox.IsChecked == true;
         _settings.AskBeforeDeleteFrames = AskBeforeDeleteFramesCheckBox.IsChecked == true;
         _settings.AskBeforeDiscardProject = AskBeforeDiscardProjectCheckBox.IsChecked == true;

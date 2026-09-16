@@ -69,13 +69,15 @@
   </a>
 </p>
 
-## Linux editor (initial support)
+## Linux application
 
-The original `GifRecorder.sln` remains the Windows application. Linux support starts with a separate editor-first application in `ScreenToGif.Linux/`, built with Avalonia and FFmpeg. It keeps the existing Windows/WPF code intact while providing a native Linux timeline editor with a deliberately simple, Windows-like desktop UI.
+The original `GifRecorder.sln` remains the Windows application. Linux support uses a separate Avalonia application in `ScreenToGif.Linux/`. The Linux application provides a timeline editor, application settings, and navigable previews of the capture-product interfaces.
 
 See [the Linux build and run guide](ScreenToGif.Linux/README.md) for prerequisites, distribution notes, Makefile shortcuts, publishing, and desktop-launcher installation.
 
-Launching the Linux application opens a Windows-like StartUp shortcut window. The Editor shortcut is active; Recorder, Webcam, Board, and Options remain visible disabled placeholders until their Linux implementations exist. Use `--editor` to skip the shortcut window when scripting or debugging the editor directly.
+Launching the Linux application opens a Windows-like StartUp shortcut window. Recorder, Webcam, Board, and Editor are reachable from that window, and Options opens the Linux application settings. Use `--editor` to bypass StartUp and open the editor directly.
+
+Recorder, Webcam, and Board are navigable interface previews. They show the intended control arrangement but do not capture the desktop, use cameras, accept Board drawing, record frames, create projects, or hand work to the Editor. Unavailable controls remain disabled and explain the missing capability in tooltips.
 
 On Ubuntu, install the .NET 9 SDK and FFmpeg (`ffmpeg` and `ffprobe` must be on `PATH`). No additional .NET workload is required.
 
@@ -86,14 +88,14 @@ dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj -- --editor
 ```
 
-The Linux editor currently supports:
+The Linux editor supports:
 
 * importing still images, animated GIF/APNG files, and common video formats through the picker or drag-and-drop;
 * selecting one or more frames, reordering, deleting, and retiming them;
 * saving self-contained `.stg-linux` projects;
 * exporting GIF, APNG, MP4, and WebM.
 
-The following Windows-oriented surfaces are intentionally outside this first Linux slice: live screen recording, webcam capture, sketchboard capture, Windows `.stg` compatibility, and the WPF editor's advanced annotation/effects commands. Wayland/X11 desktop capture and portal integration remain follow-up work; imported media editing does not depend on them.
+The Linux application does not support live screen recording, webcam capture, sketchboard drawing and recording, capture-to-Editor handoff, Windows `.stg` compatibility, or the Windows editor's advanced annotation/effects commands. Imported media editing does not depend on Wayland, X11, or desktop portal capture integration.
 	
 <h2>Would you like to help the project?</h2>
 

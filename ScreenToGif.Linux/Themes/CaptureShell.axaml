@@ -1,0 +1,44 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="Window.capture-shell">
+        <Setter Property="Background" Value="#1E1F22" />
+    </Style>
+    <Style Selector="Window.capture-shell TextBlock">
+        <Setter Property="Foreground" Value="#E1E4E8" />
+    </Style>
+    <Style Selector="Window.capture-shell Button.capture-tool, Window.capture-shell ToggleButton.capture-tool">
+        <Setter Property="MinWidth" Value="26" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="#E1E4E8" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Window.capture-shell Button.capture-command, Window.capture-shell ToggleButton.capture-command">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="5,2" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="#E1E4E8" />
+    </Style>
+    <Style Selector="Window.capture-shell Button:disabled, Window.capture-shell ToggleButton:disabled, Window.capture-shell NumericUpDown:disabled, Window.capture-shell ComboBox:disabled, Window.capture-shell CheckBox:disabled">
+        <Setter Property="Opacity" Value="0.68" />
+        <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+    </Style>
+    <Style Selector="Window.capture-shell ToggleButton.capture-tool:checked">
+        <Setter Property="Background" Value="#315E82" />
+        <Setter Property="BorderBrush" Value="#76A9D4" />
+    </Style>
+    <Style Selector="Window.capture-shell CheckBox">
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Window.capture-shell Border.capture-separator">
+        <Setter Property="Width" Value="1" />
+        <Setter Property="Margin" Value="5,3" />
+        <Setter Property="Background" Value="#555A60" />
+    </Style>
+</Styles>

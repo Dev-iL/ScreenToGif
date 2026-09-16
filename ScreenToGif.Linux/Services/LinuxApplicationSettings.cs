@@ -53,7 +53,6 @@ public sealed class LinuxApplicationSettings
     public LinuxTrayWindow DoubleLeftClickWindow { get; set; } = LinuxTrayWindow.Editor;
     public LinuxTrayAction MiddleClickAction { get; set; } = LinuxTrayAction.MinimizeWindows;
     public LinuxTrayWindow MiddleClickWindow { get; set; } = LinuxTrayWindow.None;
-    public bool NotifyBeforeClosing { get; set; } = true;
     public bool DisableHardwareAcceleration { get; set; }
     public bool AskBeforeDeleteFrames { get; set; } = true;
     public bool AskBeforeDiscardProject { get; set; } = true;
@@ -79,7 +78,6 @@ public sealed class LinuxApplicationSettings
         DoubleLeftClickWindow = DoubleLeftClickWindow,
         MiddleClickAction = MiddleClickAction,
         MiddleClickWindow = MiddleClickWindow,
-        NotifyBeforeClosing = NotifyBeforeClosing,
         DisableHardwareAcceleration = DisableHardwareAcceleration,
         AskBeforeDeleteFrames = AskBeforeDeleteFrames,
         AskBeforeDiscardProject = AskBeforeDiscardProject,

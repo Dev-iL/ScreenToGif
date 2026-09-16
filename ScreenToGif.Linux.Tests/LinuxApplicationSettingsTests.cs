@@ -26,7 +26,6 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
             DoubleLeftClickWindow = LinuxTrayWindow.None,
             MiddleClickAction = LinuxTrayAction.RestoreWindows,
             MiddleClickWindow = LinuxTrayWindow.Startup,
-            NotifyBeforeClosing = false,
             DisableHardwareAcceleration = true,
             AskBeforeDeleteFrames = false,
             AskBeforeDiscardProject = false,
@@ -41,7 +40,9 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
 
         await store.SaveAsync(expected);
         var actual = store.Load();
+        var persisted = await File.ReadAllTextAsync(path);
 
+        Assert.DoesNotContain("NotifyBeforeClosing", persisted, StringComparison.Ordinal);
         Assert.Equal(expected.SingleInstance, actual.SingleInstance);
         Assert.Equal(expected.StartMinimized, actual.StartMinimized);
         Assert.Equal(expected.StartupWindow, actual.StartupWindow);
@@ -54,7 +55,6 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
         Assert.Equal(expected.DoubleLeftClickWindow, actual.DoubleLeftClickWindow);
         Assert.Equal(expected.MiddleClickAction, actual.MiddleClickAction);
         Assert.Equal(expected.MiddleClickWindow, actual.MiddleClickWindow);
-        Assert.Equal(expected.NotifyBeforeClosing, actual.NotifyBeforeClosing);
         Assert.Equal(expected.DisableHardwareAcceleration, actual.DisableHardwareAcceleration);
         Assert.Equal(expected.AskBeforeDeleteFrames, actual.AskBeforeDeleteFrames);
         Assert.Equal(expected.AskBeforeDiscardProject, actual.AskBeforeDiscardProject);

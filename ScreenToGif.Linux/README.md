@@ -1,8 +1,8 @@
 # ScreenToGif for Linux
 
-This is the Avalonia-based Linux application. It is an editor-first port: it
-imports media, edits a frame timeline, saves `.stg-linux` projects, and exports
-GIF, APNG, MP4, and WebM. The original `GifRecorder.sln` remains the Windows
+This is the Avalonia-based Linux application. It provides a working timeline
+editor, application settings, and navigable previews of the Recorder, Webcam,
+and Board interfaces. The original `GifRecorder.sln` remains the Windows
 application.
 
 Detailed behavior and limits for each ribbon tab are documented in
@@ -59,7 +59,9 @@ dotnet test ScreenToGif.Linux.Tests/ScreenToGif.Linux.Tests.csproj --no-restore
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build
 ```
 
-The default launch opens the StartUp window. To open the editor directly:
+The default launch opens the StartUp window. Its Recorder, Webcam, Board, and
+Editor destinations are reachable, and the Options button opens the Linux
+application settings. To open the editor directly:
 
 ```bash
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build -- --editor
@@ -100,8 +102,17 @@ an already-built executable instead, run:
 
 ## Current scope
 
-Recorder, Webcam, Board, and Options remain visible but disabled while their
-Linux implementations are pending. Windows `.stg` compatibility, desktop
-capture, and the Windows editor's advanced annotation/effects commands are not
-part of this Linux application yet; their disabled ribbon controls explain the
-missing subsystem in a tooltip.
+The Editor imports still images, animated GIF/APNG files, and common video
+formats; supports frame selection, reordering, deletion, and timing changes;
+saves self-contained `.stg-linux` projects; and exports GIF, APNG, MP4, and
+WebM. Options provides the Linux application settings.
+
+Recorder, Webcam, and Board are navigable interface scaffolds. A scaffold is a
+visual preview of an interface without its product functionality.
+These windows do not capture the desktop, discover or use cameras, accept Board
+drawing, record frames, create projects, or hand work to the Editor. Their
+unavailable controls remain disabled and explain the missing capability in
+tooltips.
+
+The Linux application does not support Windows `.stg` compatibility or the
+Windows editor's advanced annotation/effects commands.

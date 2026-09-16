@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ScreenToGif.Linux.Controls"
+        xmlns:icons="using:ScreenToGif.Linux"
+        x:Class="ScreenToGif.Linux.RecorderWindow"
+        Classes="capture-shell"
+        Title="ScreenToGif - Recorder"
+        Width="530"
+        Height="278"
+        MinWidth="530"
+        MinHeight="278"
+        CanResize="True"
+        Topmost="True"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Resources/Logo.ico">
+    <Grid RowDefinitions="*,31">
+        <Border x:Name="CaptureViewport"
+                Grid.Row="0"
+                Margin="0,4,0,0"
+                Background="Transparent"
+                BorderBrush="#60656B"
+                BorderThickness="1"
+                ToolTip.Tip="Desktop capture and region selection are not available in this GUI scaffold." />
+
+        <Border x:Name="CommandBar" Grid.Row="1" Background="#25272A" BorderBrush="#555A60" BorderThickness="1,1,1,0">
+            <Grid Height="31" Margin="6,0" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="SnapWindowButton" Classes="capture-tool" IsEnabled="False"
+                            ToolTip.Tip="Window snapping and region selection require the Linux desktop-capture subsystem.">
+                        <icons:WindowsIcon Kind="Crosshair" Width="20" Height="20" />
+                    </Button>
+                    <Button x:Name="OptionsButton" Classes="capture-tool" IsEnabled="False"
+                            ToolTip.Tip="Recorder Options navigation is not available in this GUI scaffold.">
+                        <icons:WindowsIcon Kind="Options" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Border Classes="capture-separator" />
+                    <Border ToolTip.Tip="Capture frequency will be available with the Linux desktop-capture subsystem.">
+                        <controls:FrequencyIndicator Margin="1" />
+                    </Border>
+                    <controls:ScaffoldNumericField x:Name="FrequencyInput" Width="56" Margin="1,3" Value="15" IsEnabled="False"
+                                                   ToolTip.Tip="Capture frequency cannot be changed until Linux recording is implemented." />
+                    <TextBlock Text="fps" FontSize="12" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <Border Classes="capture-separator" />
+                    <controls:ScaffoldNumericField x:Name="CaptureWidthInput" Width="56" Margin="1,3" Value="502" IsEnabled="False"
+                                                   ToolTip.Tip="Capture width cannot be changed until region selection is implemented." />
+                    <TextBlock Text="×" FontSize="15" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                    <controls:ScaffoldNumericField x:Name="CaptureHeightInput" Width="56" Margin="1,3" Value="203" IsEnabled="False"
+                                                   ToolTip.Tip="Capture height cannot be changed until region selection is implemented." />
+                    <TextBlock Text="px" FontSize="12" Margin="2,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="6" Orientation="Horizontal">
+                    <Border Classes="capture-separator" Margin="3,3" />
+                    <Button x:Name="RecordButton" Classes="capture-command" Width="78" IsEnabled="False"
+                            ToolTip.Tip="Screen recording requires the Linux desktop-capture subsystem.">
+                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                            <icons:WindowsIcon Kind="Record" Width="18" Height="18" />
+                            <TextBlock Text="Record" FontSize="12" VerticalAlignment="Center" TextWrapping="NoWrap" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

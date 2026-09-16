@@ -6,5 +6,6 @@
         <fluent:FluentTheme />
         <StyleInclude Source="avares://ScreenToGif.Linux/Themes/RibbonButton.axaml" />
         <StyleInclude Source="avares://ScreenToGif.Linux/Themes/RibbonTabItem.axaml" />
+        <StyleInclude Source="avares://ScreenToGif.Linux/Themes/CaptureShell.axaml" />
     </Application.Styles>
 </Application>

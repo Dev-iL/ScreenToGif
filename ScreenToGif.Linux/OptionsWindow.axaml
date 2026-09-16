@@ -210,7 +210,6 @@
                     <Expander Classes="settings-group" Header="General">
                         <StackPanel>
                             <CheckBox Classes="setting" Content="Workaround for the 'Not enough quota...' crash.  (Windows only)" IsEnabled="False" ToolTip.Tip="This workaround targets the Windows WPF dispatcher and does not apply on Linux." />
-                            <CheckBox x:Name="NotifyBeforeClosingCheckBox" Classes="setting" Content="Ask me before closing the app." />
                             <CheckBox x:Name="DisableHardwareAccelerationCheckBox" Classes="setting" Content="Disable hardware acceleration.  (Takes effect after restart)" />
                             <CheckBox Classes="setting" Content="Check for translation updates." IsEnabled="False" ToolTip.Tip="Translation updates are not available in the Linux application yet." />
                             <CheckBox Classes="setting" Content="Check for updates on startup." IsEnabled="False" ToolTip.Tip="Application updates are not available in the Linux application yet." />

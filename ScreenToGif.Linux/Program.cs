@@ -17,8 +17,8 @@ internal static class Program
             ProjectArchive.ScavengeStaleWorkspaces(LinuxSettings.Current.ProjectRetentionDays);
         if (args.Any(arg => arg is "--help" or "-h"))
         {
-            Console.WriteLine("ScreenToGif Linux editor");
-            Console.WriteLine("Open media, edit the frame timeline, save a project, and export with FFmpeg.");
+            Console.WriteLine("ScreenToGif for Linux");
+            Console.WriteLine("Open Recorder, Webcam, and Board previews, configure the application, or edit and export media.");
             Console.WriteLine();
             Console.WriteLine("Usage: dotnet run --project ScreenToGif.Linux [--editor | --options] [--new-instance]");
             return;

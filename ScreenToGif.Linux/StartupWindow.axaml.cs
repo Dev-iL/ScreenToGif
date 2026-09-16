@@ -2,21 +2,31 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using ScreenToGif.Linux.Services;
 
 namespace ScreenToGif.Linux;
 
-public partial class StartupWindow : Window
+public partial class StartupWindow : Window, ICaptureShellHost
 {
+    private readonly CaptureShellCoordinator _captureShellCoordinator;
     private bool _openingEditor;
-    private bool _allowClose;
-    private bool _closePromptOpen;
+    private bool _isClosed;
 
     public StartupWindow()
     {
         InitializeComponent();
-        Closing += StartupClosing;
+        _captureShellCoordinator = new CaptureShellCoordinator(this);
         Closed += StartupClosed;
     }
+
+    private void OpenRecorderClick(object? sender, RoutedEventArgs e) =>
+        _captureShellCoordinator.Open(CaptureShellKind.Recorder);
+
+    private void OpenWebcamClick(object? sender, RoutedEventArgs e) =>
+        _captureShellCoordinator.Open(CaptureShellKind.Webcam);
+
+    private void OpenBoardClick(object? sender, RoutedEventArgs e) =>
+        _captureShellCoordinator.Open(CaptureShellKind.Board);
 
     private void OpenEditorClick(object? sender, RoutedEventArgs e)
     {
@@ -33,35 +43,29 @@ public partial class StartupWindow : Window
 
     private void OpenOptionsClick(object? sender, RoutedEventArgs e) => App.CurrentApp?.ShowOptions(this);
 
-    private async void StartupClosing(object? sender, WindowClosingEventArgs e)
+    public ICaptureShellWindow CreateShell(CaptureShellKind kind) => kind switch
     {
-        if (_openingEditor || _allowClose || !Services.LinuxSettings.Current.NotifyBeforeClosing)
+        CaptureShellKind.Recorder => new RecorderWindow(),
+        CaptureShellKind.Webcam => new WebcamWindow(),
+        CaptureShellKind.Board => new BoardWindow(),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+    };
+
+    public void HideStartup() => Hide();
+
+    public void RestoreStartup()
+    {
+        if (_isClosed)
             return;
 
-        e.Cancel = true;
-        if (_closePromptOpen)
-            return;
-
-        _closePromptOpen = true;
-        try
-        {
-            var confirmed = await new Controls.ConfirmDialog(
-                "Close ScreenToGif",
-                "Close ScreenToGif?",
-                "Close").ShowForAsync(this);
-            if (!confirmed)
-                return;
-            _allowClose = true;
-            Close();
-        }
-        finally
-        {
-            _closePromptOpen = false;
-        }
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
     }
 
     private void StartupClosed(object? sender, EventArgs e)
     {
+        _isClosed = true;
         if (!_openingEditor)
             App.CurrentApp?.HandleWindowClosed();
     }

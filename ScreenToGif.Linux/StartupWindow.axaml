@@ -68,7 +68,7 @@
         </Grid>
 
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" Background="#1E1F22">
-            <Button Grid.Column="0" Classes="shortcut" IsEnabled="False" ToolTip.Tip="Screen recording is not available on Linux yet.">
+            <Button x:Name="RecorderShortcut" Grid.Column="0" Classes="shortcut" Click="OpenRecorderClick" ToolTip.Tip="Open the Recorder GUI scaffold. Screen capture is not available yet.">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#A02821" Data="M 40,20.656 C 40,30.673 31.880,38.793 21.863,38.793 C 11.846,38.793 3.725,30.673 3.725,20.656 C 3.725,10.639 11.846,2.518 21.863,2.518 C 31.880,2.518 40,10.639 40,20.656 Z" />
@@ -79,7 +79,7 @@
                 </StackPanel>
             </Button>
 
-            <Button Grid.Column="1" Classes="shortcut" IsEnabled="False" ToolTip.Tip="Webcam recording is not available on Linux yet.">
+            <Button x:Name="WebcamShortcut" Grid.Column="1" Classes="shortcut" Click="OpenWebcamClick" ToolTip.Tip="Open the Webcam GUI scaffold. Camera capture is not available yet.">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#FFFFFF" Data="F1 M 31.721,25.054 L 6.123,25.054 L 6.123,6.576 L 31.721,6.576 L 31.721,25.054 Z" />
@@ -92,7 +92,7 @@
                 </StackPanel>
             </Button>
 
-            <Button Grid.Column="2" Classes="shortcut" IsEnabled="False" ToolTip.Tip="Board recording is not available on Linux yet.">
+            <Button x:Name="BoardShortcut" Grid.Column="2" Classes="shortcut" Click="OpenBoardClick" ToolTip.Tip="Open the Board GUI scaffold. Drawing and recording are not available yet.">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#FFFFFF" Data="M 39.934,38 L 6.038,38 L 6.038,7.857 L 39.934,7.857 L 39.934,38 Z" />
@@ -105,7 +105,7 @@
                 </StackPanel>
             </Button>
 
-            <Button Grid.Column="3" Classes="shortcut" Click="OpenEditorClick">
+            <Button x:Name="EditorShortcut" Grid.Column="3" Classes="shortcut" Click="OpenEditorClick">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#FFFFFF" Data="M 39.273,35.573 L 0.727,35.573 L 0.727,7.260 L 39.273,7.260 L 39.273,35.573 Z" />
