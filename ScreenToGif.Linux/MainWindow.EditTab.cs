@@ -62,6 +62,17 @@ public partial class MainWindow
             return;
         }
 
+        if (!await _destructiveActions.ConfirmAsync(
+                LinuxSettings.Current.AskBeforeDeleteFrames,
+                () => new Controls.ConfirmDialog(
+                    "Delete frames",
+                    $"Delete {indices.Length} selected frame(s)? You can undo this action while it remains in history.",
+                    "Delete").ShowForAsync(this)))
+        {
+            SetStatus("Frame deletion canceled.");
+            return;
+        }
+
         var remaining = FrameSequenceOperations.Delete(CurrentStates(), indices);
         var nextSelection = remaining.Count == 0 ? [] : new[] { Math.Min(indices[0], remaining.Count - 1) };
         await RunSequenceEditAsync("Delete frames", remaining, nextSelection,

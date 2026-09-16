@@ -17,6 +17,7 @@ public sealed class FrameEditHistory
 {
     public const int MaximumEntries = 100;
 
+    private readonly int _maximumEntries;
     private readonly Stack<FrameEdit> _undo = [];
     private readonly Stack<FrameEdit> _redo = [];
     private EditorSnapshot? _baseline;
@@ -25,6 +26,11 @@ public sealed class FrameEditHistory
 
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
+
+    public FrameEditHistory(int maximumEntries = MaximumEntries)
+    {
+        _maximumEntries = maximumEntries < 1 ? int.MaxValue : maximumEntries;
+    }
 
     public void SetBaseline(EditorSnapshot state)
     {
@@ -130,10 +136,10 @@ public sealed class FrameEditHistory
 
     private bool TrimUndoHistory()
     {
-        if (_undo.Count <= MaximumEntries)
+        if (_undo.Count <= _maximumEntries)
             return false;
 
-        var retained = _undo.Take(MaximumEntries).Reverse().ToArray();
+        var retained = _undo.Take(_maximumEntries).Reverse().ToArray();
         _undo.Clear();
         foreach (var edit in retained)
             _undo.Push(edit);

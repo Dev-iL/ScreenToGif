@@ -25,7 +25,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<EditorFrame> _frames = [];
     private readonly MediaImporter _importer;
     private readonly FfmpegExporter _exporter;
-    private readonly FrameEditHistory _history = new();
+    private readonly FrameEditHistory _history = new(LinuxSettings.Current.UndoLimit);
     private readonly EditorMutationCoordinator _mutations;
     private readonly FrameTransformService _transformer;
     private readonly EditorOperationCoordinator _operations = new();

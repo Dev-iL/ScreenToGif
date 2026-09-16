@@ -185,7 +185,7 @@ public static class ProjectArchive
 
     public static EditorWorkspace CreateWorkspace() => EditorWorkspace.Create();
 
-    public static void ScavengeStaleWorkspaces()
+    public static void ScavengeStaleWorkspaces(int retentionDays = 1)
     {
         try
         {
@@ -197,7 +197,7 @@ public static class ProjectArchive
                 if (IsOwnedByLiveProcess(path))
                     continue;
                 var ownerPath = Path.Combine(path, OwnerFileName);
-                if (!File.Exists(ownerPath) && Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-1))
+                if (!File.Exists(ownerPath) && retentionDays > 0 && Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-retentionDays))
                     continue;
                 TryDeleteWorkspace(path);
             }

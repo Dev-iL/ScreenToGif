@@ -18,6 +18,7 @@ public partial class MainWindow
 
     partial void InitializePlayback()
     {
+        DropFramesCheckBox.IsChecked = LinuxSettings.Current.DropFramesWhenBehind;
         _previewTimer.Tick += PreviewTimerTick;
         _stopActivePreview = StopPlaybackPreview;
         OperationStateChanged += UpdatePlaybackControls;

@@ -280,7 +280,7 @@ public partial class MainWindow
     private async Task<bool> ConfirmProjectReplacementAsync(string action)
     {
         var confirmed = await _destructiveActions.ConfirmAsync(
-            _mutations.HasUnsavedChanges,
+            _mutations.HasUnsavedChanges && LinuxSettings.Current.AskBeforeDiscardProject,
             () => new Controls.ConfirmDialog(
                 "Replace current project",
                 $"Save or discard the current edits before you {action}. Continue and permanently discard the unsaved work?",
@@ -305,7 +305,7 @@ public partial class MainWindow
             SetStatus("Canceling the active operation before closing...");
             return;
         }
-        if (!_mutations.HasUnsavedChanges)
+        if (!_mutations.HasUnsavedChanges || !LinuxSettings.Current.AskBeforeCloseEditor)
             return;
 
         e.Cancel = true;

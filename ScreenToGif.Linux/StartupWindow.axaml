@@ -59,8 +59,7 @@
                        Foreground="#C7CBD1" />
             <Button Grid.Column="1"
                     Classes="options-button"
-                    IsEnabled="False"
-                    ToolTip.Tip="Options are not available on Linux yet.">
+                    Click="OpenOptionsClick">
                 <StackPanel Orientation="Horizontal" Spacing="2">
                     <icons:WindowsIcon Kind="Options" Width="25" Height="25" />
                     <TextBlock Text="Options" VerticalAlignment="Center" />
