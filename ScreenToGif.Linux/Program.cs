@@ -9,6 +9,7 @@ internal static class Program
     public static bool StartInEditor { get; private set; }
     public static bool StartInOptions { get; private set; }
     public static bool StartInWebcam { get; private set; }
+    public static bool StartInBoard { get; private set; }
 
     [STAThread]
     public static void Main(string[] args)
@@ -19,18 +20,19 @@ internal static class Program
         if (args.Any(arg => arg is "--help" or "-h"))
         {
             Console.WriteLine("ScreenToGif for Linux");
-            Console.WriteLine("Record your webcam straight into the editor, configure the application, or edit and export media.");
-            Console.WriteLine("Recorder and Board remain navigable previews.");
+            Console.WriteLine("Record the screen or your webcam straight into the editor, draw and record on the Board, configure the application, or edit and export media.");
             Console.WriteLine();
-            Console.WriteLine("Usage: dotnet run --project ScreenToGif.Linux [--editor | --options | --webcam] [--new-instance]");
+            Console.WriteLine("Usage: dotnet run --project ScreenToGif.Linux [--editor | --options | --webcam | --board] [--new-instance]");
             Console.WriteLine();
             Console.WriteLine("  --webcam   Open the webcam recorder instead of the StartUp window.");
+            Console.WriteLine("  --board    Open the Board recorder instead of the StartUp window.");
             return;
         }
 
         StartInEditor = args.Any(arg => arg == "--editor");
         StartInOptions = args.Any(arg => arg == "--options");
         StartInWebcam = args.Any(arg => arg == "--webcam");
+        StartInBoard = args.Any(arg => arg == "--board");
 
         var allowNewInstance = args.Any(arg => arg == "--new-instance");
         using var instance = SingleInstanceGuard.TryAcquire(LinuxSettings.Current.SingleInstance && !allowNewInstance);

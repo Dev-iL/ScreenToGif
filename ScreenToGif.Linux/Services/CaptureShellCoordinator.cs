@@ -7,6 +7,16 @@ public enum CaptureShellKind
     Board
 }
 
+/// <summary>What the editor should do with a recording when the shell that made it closes.</summary>
+public enum CaptureShellAdoption
+{
+    /// <summary>Open the recording as the project, replacing what the editor held.</summary>
+    ReplaceProject,
+
+    /// <summary>Append the recording to the project the editor holds, as one undoable step.</summary>
+    AppendToProject
+}
+
 public interface ICaptureShellWindow
 {
     event EventHandler? Closed;
@@ -42,12 +52,13 @@ public interface ICaptureShellHost
     void CloseStartup();
 
     /// <summary>
-    /// Opens the editor on a capture shell's recording. Takes ownership and returns true when it did;
-    /// returns false when it could not, having already told the user why, and leaves the recording to
-    /// the caller to dispose. It reports its own failures rather than throwing, because it runs from a
+    /// Opens the editor on a capture shell's recording, replacing its project or appending to it as
+    /// <paramref name="adoption"/> says. Takes ownership and returns true when it did; returns false
+    /// when it could not, having already told the user why, and leaves the recording to the caller to
+    /// dispose. It reports its own failures rather than throwing, because it runs from a
     /// window-closed notification where nothing is left to catch.
     /// </summary>
-    bool AdoptRecording(LoadedProject recording);
+    bool AdoptRecording(LoadedProject recording, CaptureShellAdoption adoption);
 
     /// <summary>
     /// Tells the user about a failure the coordinator could not route anywhere else. It is called from
@@ -62,13 +73,19 @@ public interface ICaptureShellHost
 public sealed class CaptureShellCoordinator(ICaptureShellHost host)
 {
     private ICaptureShellWindow? _activeShell;
+    private CaptureShellAdoption _activeAdoption;
 
     public CaptureShellKind? ActiveKind { get; private set; }
 
     /// <summary>The shell currently open, or null when none is. One owner of this fact, cleared on close.</summary>
     public ICaptureShellWindow? ActiveShell => _activeShell;
 
-    public bool Open(CaptureShellKind kind)
+    /// <summary>
+    /// Opens a shell of <paramref name="kind"/>, or activates the one already open. The recording it
+    /// makes is adopted as <paramref name="adoption"/> says; a request that only activates an open
+    /// shell leaves that shell's adoption as it was.
+    /// </summary>
+    public bool Open(CaptureShellKind kind, CaptureShellAdoption adoption = CaptureShellAdoption.ReplaceProject)
     {
         if (_activeShell is not null)
         {
@@ -78,6 +95,7 @@ public sealed class CaptureShellCoordinator(ICaptureShellHost host)
 
         var shell = host.CreateShell(kind);
         _activeShell = shell;
+        _activeAdoption = adoption;
         ActiveKind = kind;
         shell.Closed += ShellClosed;
 
@@ -107,6 +125,7 @@ public sealed class CaptureShellCoordinator(ICaptureShellHost host)
         if (shell is null || !ReferenceEquals(sender, shell))
             return;
 
+        var adoption = _activeAdoption;
         shell.Closed -= ShellClosed;
         _activeShell = null;
         ActiveKind = null;
@@ -139,7 +158,7 @@ public sealed class CaptureShellCoordinator(ICaptureShellHost host)
         var adopted = false;
         try
         {
-            adopted = host.AdoptRecording(recording);
+            adopted = host.AdoptRecording(recording, adoption);
         }
         catch (Exception ex)
         {

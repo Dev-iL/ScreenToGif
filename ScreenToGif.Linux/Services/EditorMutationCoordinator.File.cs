@@ -10,7 +10,7 @@ public sealed partial class EditorMutationCoordinator
         !history.CanUndo &&
         !history.CanRedo;
 
-    public void FinalizeImport(EditorSnapshot before)
+    public void FinalizeImport(EditorSnapshot before, string description = "Insert media")
     {
         if (IsPristineEmptySession(before))
         {
@@ -19,6 +19,6 @@ public sealed partial class EditorMutationCoordinator
             return;
         }
 
-        Commit("Insert media", before);
+        Commit(description, before);
     }
 }

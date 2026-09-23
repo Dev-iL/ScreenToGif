@@ -212,14 +212,28 @@ public partial class MainWindow
     /// through the same confirmation Open project uses; closing the recorder with nothing recorded, or
     /// declining that confirmation, leaves the project untouched.
     /// </summary>
-    private void NewWebcamRecordingClick(object? sender, RoutedEventArgs e)
+    private void NewWebcamRecordingClick(object? sender, RoutedEventArgs e) =>
+        OpenCaptureShellOverEditor(CaptureShellKind.Webcam, CaptureShellAdoption.ReplaceProject);
+
+    /// <summary>Opens the Board over the editor; a recording with frames replaces the project, as the webcam's does.</summary>
+    private void NewBoardClick(object? sender, RoutedEventArgs e) =>
+        OpenCaptureShellOverEditor(CaptureShellKind.Board, CaptureShellAdoption.ReplaceProject);
+
+    /// <summary>Opens the Board over the editor; a recording with frames is appended to the project as one undoable step.</summary>
+    private void InsertBoardClick(object? sender, RoutedEventArgs e) =>
+        OpenCaptureShellOverEditor(CaptureShellKind.Board, CaptureShellAdoption.AppendToProject);
+
+    /// <summary>
+    /// Opens a capture shell through the application's coordinator, like every other way one opens,
+    /// so a second click cannot put two recorders on one device. Closing it with frames hands them
+    /// back to this editor, because an editor already open is the adoption target.
+    /// </summary>
+    private void OpenCaptureShellOverEditor(CaptureShellKind kind, CaptureShellAdoption adoption)
     {
         try
         {
-            // Through the application's coordinator, like every other way the recorder opens, so a
-            // second click cannot put two recorders on one camera. Closing it with frames hands them
-            // back to this editor, because an editor already open is the adoption target.
-            if (App.CurrentApp?.OpenCaptureShell(CaptureShellKind.Webcam) is null)
+            StopPreview();
+            if (App.CurrentApp?.OpenCaptureShell(kind, adoption) is null)
                 SetStatus("A capture window is already open.");
         }
         catch (Exception ex)
@@ -346,6 +360,50 @@ public partial class MainWindow
         {
             // A no-op once the project was adopted, and the release path for every route that did not
             // reach the adoption: a declined confirmation, a busy editor, or a failed load.
+            recording.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Appends a capture shell's recording to the open project as one undoable step. The frames are
+    /// copied into this editor's workspace first, because the shell's workspace is deleted with the
+    /// recording and the inserted frames and their history must outlive it. Takes ownership of the
+    /// recording and releases it once the copies exist, or when the insert fails.
+    /// </summary>
+    public async Task InsertRecordedFramesAsync(LoadedProject recording)
+    {
+        ArgumentNullException.ThrowIfNull(recording);
+
+        try
+        {
+            StopPreview();
+            var selectedIndex = FrameListBox.SelectedIndex;
+            var placement = _frames.Count == 0
+                ? BoardInsertionPosition.Beginning
+                : await new Controls.FrameInsertionDialog(_frames.Count, selectedIndex).ShowForAsync(this);
+            if (placement is null)
+            {
+                SetStatus("Board insertion canceled; the current project is unchanged.");
+                return;
+            }
+
+            var insertionIndex = BoardInsertionPlacement.Resolve(_frames.Count, selectedIndex, placement.Value);
+            await RunOperationAsync("Insert recording", async cancellationToken =>
+            {
+                SetStatus("Inserting the recording... Use Stop to cancel.");
+                var before = CaptureSnapshot();
+                var copied = await BoardFrameTransfer.CopyIntoAsync(_workspace, recording.Frames, cancellationToken);
+                await AddFramesAsync(copied, "Inserting recorded frames", cancellationToken, insertionIndex);
+                _mutations.Commit("Insert recording", before);
+                SetStatus($"Inserted {copied.Count} recorded frame(s).");
+            });
+        }
+        catch (Exception ex)
+        {
+            SetError(ex);
+        }
+        finally
+        {
             recording.Dispose();
         }
     }

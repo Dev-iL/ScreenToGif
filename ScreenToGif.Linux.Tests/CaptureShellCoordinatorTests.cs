@@ -249,6 +249,67 @@ public sealed class CaptureShellCoordinatorTests
         Assert.False(Directory.Exists(workspaceRoot));
     }
 
+    [Fact]
+    public void AShellOpenedToReplaceTheProjectHandsItsRecordingOverForReplacement()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var workspace = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-adoption-{Guid.NewGuid():N}"));
+
+        coordinator.Open(CaptureShellKind.Board);
+        host.Created[0].Recording = new LoadedProject(workspace, []);
+        host.Created[0].Close();
+
+        Assert.Equal([CaptureShellAdoption.ReplaceProject], host.Adoptions);
+    }
+
+    [Fact]
+    public void AShellOpenedToAppendHandsItsRecordingOverForAppending()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var workspace = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-adoption-{Guid.NewGuid():N}"));
+
+        coordinator.Open(CaptureShellKind.Board, CaptureShellAdoption.AppendToProject);
+        host.Created[0].Recording = new LoadedProject(workspace, []);
+        host.Created[0].Close();
+
+        Assert.Equal([CaptureShellAdoption.AppendToProject], host.Adoptions);
+    }
+
+    [Fact]
+    public void AskingForAShellThatIsAlreadyOpenDoesNotChangeWhatItsRecordingIsFor()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var workspace = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-adoption-{Guid.NewGuid():N}"));
+
+        coordinator.Open(CaptureShellKind.Board, CaptureShellAdoption.AppendToProject);
+        Assert.False(coordinator.Open(CaptureShellKind.Board));
+        host.Created[0].Recording = new LoadedProject(workspace, []);
+        host.Created[0].Close();
+
+        Assert.Equal([CaptureShellAdoption.AppendToProject], host.Adoptions);
+    }
+
+    [Fact]
+    public void TheNextShellStartsFromReplacementWhateverTheLastOneWasFor()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var first = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-adoption-{Guid.NewGuid():N}"));
+        using var second = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-adoption-{Guid.NewGuid():N}"));
+
+        coordinator.Open(CaptureShellKind.Board, CaptureShellAdoption.AppendToProject);
+        host.Created[0].Recording = new LoadedProject(first, []);
+        host.Created[0].Close();
+        coordinator.Open(CaptureShellKind.Webcam);
+        host.Created[1].Recording = new LoadedProject(second, []);
+        host.Created[1].Close();
+
+        Assert.Equal([CaptureShellAdoption.AppendToProject, CaptureShellAdoption.ReplaceProject], host.Adoptions);
+    }
+
     private sealed class FakeHost : ICaptureShellHost
     {
         public List<FakeShell> Created { get; } = [];
@@ -271,6 +332,8 @@ public sealed class CaptureShellCoordinatorTests
 
         public List<LoadedProject> Adopted { get; } = [];
 
+        public List<CaptureShellAdoption> Adoptions { get; } = [];
+
         public ICaptureShellWindow CreateShell(CaptureShellKind kind)
         {
             var shell = new FakeShell(kind, FailNextShow);
@@ -279,7 +342,7 @@ public sealed class CaptureShellCoordinatorTests
             return shell;
         }
 
-        public bool AdoptRecording(LoadedProject recording)
+        public bool AdoptRecording(LoadedProject recording, CaptureShellAdoption adoption)
         {
             if (AdoptionThrows)
                 throw new IOException("Synthetic adoption failure.");
@@ -287,6 +350,7 @@ public sealed class CaptureShellCoordinatorTests
                 return false;
 
             Adopted.Add(recording);
+            Adoptions.Add(adoption);
             return true;
         }
 

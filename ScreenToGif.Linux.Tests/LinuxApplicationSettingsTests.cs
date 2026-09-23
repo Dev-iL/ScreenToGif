@@ -178,7 +178,19 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
             RemoveOldProjects = false,
             ProjectRetentionDays = 14,
             FfmpegPath = "/opt/ffmpeg/bin/ffmpeg",
-            WebcamFps = 24
+            WebcamFps = 24,
+            BoardBrushColor = "#3366FF",
+            BoardBrushWidth = 23,
+            BoardBrushHeight = 7,
+            BoardBrushTip = BoardStylusTip.Rectangle,
+            BoardFitToCurve = true,
+            BoardHighlighter = true,
+            BoardEraserWidth = 41,
+            BoardEraserHeight = 12,
+            BoardEraserTip = BoardStylusTip.Ellipse,
+            BoardWidth = 1024,
+            BoardHeight = 640,
+            BoardFps = 24
         };
 
         await store.SaveAsync(expected);
@@ -209,6 +221,67 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
         Assert.Equal(expected.ProjectRetentionDays, actual.ProjectRetentionDays);
         Assert.Equal(expected.FfmpegPath, actual.FfmpegPath);
         Assert.Equal(expected.WebcamFps, actual.WebcamFps);
+        Assert.Equal(expected.BoardBrushColor, actual.BoardBrushColor);
+        Assert.Equal(expected.BoardBrushWidth, actual.BoardBrushWidth);
+        Assert.Equal(expected.BoardBrushHeight, actual.BoardBrushHeight);
+        Assert.Equal(expected.BoardBrushTip, actual.BoardBrushTip);
+        Assert.Equal(expected.BoardFitToCurve, actual.BoardFitToCurve);
+        Assert.Equal(expected.BoardHighlighter, actual.BoardHighlighter);
+        Assert.Equal(expected.BoardEraserWidth, actual.BoardEraserWidth);
+        Assert.Equal(expected.BoardEraserHeight, actual.BoardEraserHeight);
+        Assert.Equal(expected.BoardEraserTip, actual.BoardEraserTip);
+        Assert.Equal(expected.BoardWidth, actual.BoardWidth);
+        Assert.Equal(expected.BoardHeight, actual.BoardHeight);
+        Assert.Equal(expected.BoardFps, actual.BoardFps);
+    }
+
+    [Fact]
+    public void CopyCarriesEveryBoardChoice()
+    {
+        var original = new LinuxApplicationSettings
+        {
+            BoardBrushColor = "#ABCDEF",
+            BoardBrushWidth = 31,
+            BoardBrushHeight = 9,
+            BoardBrushTip = BoardStylusTip.Rectangle,
+            BoardFitToCurve = true,
+            BoardHighlighter = true,
+            BoardEraserWidth = 55,
+            BoardEraserHeight = 3,
+            BoardEraserTip = BoardStylusTip.Ellipse,
+            BoardWidth = 1234,
+            BoardHeight = 567,
+            BoardFps = 42
+        };
+
+        var copy = original.Copy();
+
+        Assert.Equal(original.BoardBrushColor, copy.BoardBrushColor);
+        Assert.Equal(original.BoardBrushWidth, copy.BoardBrushWidth);
+        Assert.Equal(original.BoardBrushHeight, copy.BoardBrushHeight);
+        Assert.Equal(original.BoardBrushTip, copy.BoardBrushTip);
+        Assert.Equal(original.BoardFitToCurve, copy.BoardFitToCurve);
+        Assert.Equal(original.BoardHighlighter, copy.BoardHighlighter);
+        Assert.Equal(original.BoardEraserWidth, copy.BoardEraserWidth);
+        Assert.Equal(original.BoardEraserHeight, copy.BoardEraserHeight);
+        Assert.Equal(original.BoardEraserTip, copy.BoardEraserTip);
+        Assert.Equal(original.BoardWidth, copy.BoardWidth);
+        Assert.Equal(original.BoardHeight, copy.BoardHeight);
+        Assert.Equal(original.BoardFps, copy.BoardFps);
+    }
+
+    [Fact]
+    public void AnOlderSettingsFileStillLoadsAndTakesTheBoardDefaults()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "settings.json");
+        File.WriteAllText(path, """{ "SingleInstance": false, "UndoLimit": 7 }""");
+
+        var settings = new LinuxApplicationSettingsStore(path).Load();
+
+        Assert.False(settings.SingleInstance);
+        Assert.Equal(7, settings.UndoLimit);
+        AssertBoardDefaults(settings);
     }
 
     [Fact]
@@ -225,6 +298,7 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
         Assert.Equal(LinuxStartupWindow.Startup, settings.StartupWindow);
         Assert.False(settings.StartMinimized);
         Assert.Equal(15, settings.WebcamFps);
+        AssertBoardDefaults(settings);
     }
 
     [Fact]
@@ -277,6 +351,44 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
     public void CopyCarriesWebcamFps()
     {
         Assert.Equal(48, new LinuxApplicationSettings { WebcamFps = 48 }.Copy().WebcamFps);
+    }
+
+    [Fact]
+    public async Task ASettingsFileThatCannotBeWrittenSurfacesTheFailureAndKeepsTheOldFile()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "settings.json");
+        var store = new LinuxApplicationSettingsStore(path);
+        await store.SaveAsync(new LinuxApplicationSettings { BoardFps = 12 });
+
+        // A directory where the temporary file must go makes the write fail the way a full or
+        // read-only disk does, without depending on the permissions of the machine running the test.
+        Directory.CreateDirectory(path + ".tmp");
+
+        var failure = await Record.ExceptionAsync(() => store.SaveAsync(new LinuxApplicationSettings { BoardFps = 40 }));
+
+        // The two exception types the Board reports a failed settings write under.
+        Assert.True(failure is IOException or UnauthorizedAccessException, $"Unexpected failure: {failure}");
+        Assert.Equal(12, store.Load().BoardFps);
+    }
+
+    [Fact]
+    public void MissingSettingsFallBackToTheBoardDefaults() =>
+        AssertBoardDefaults(new LinuxApplicationSettingsStore(Path.Combine(_directory, "absent.json")).Load());
+
+    private static void AssertBoardDefaults(LinuxApplicationSettings settings)
+    {
+        Assert.Equal("#000000", settings.BoardBrushColor);
+        Assert.Equal(10, settings.BoardBrushWidth);
+        Assert.Equal(10, settings.BoardBrushHeight);
+        Assert.Equal(BoardStylusTip.Ellipse, settings.BoardBrushTip);
+        Assert.False(settings.BoardFitToCurve);
+        Assert.False(settings.BoardHighlighter);
+        Assert.Equal(10, settings.BoardEraserWidth);
+        Assert.Equal(10, settings.BoardEraserHeight);
+        Assert.Equal(BoardStylusTip.Rectangle, settings.BoardEraserTip);
+        Assert.Equal(15, settings.BoardFps);
+        Assert.True(settings.RecorderAskBeforeDiscarding);
     }
 
     [Fact]

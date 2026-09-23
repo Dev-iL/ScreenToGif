@@ -67,11 +67,15 @@ public partial class MainWindow : Window
     private async Task AddFramesAsync(
         IEnumerable<EditorFrame> frames,
         string operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? insertionIndex = null)
     {
         var incoming = frames.ToList();
         try
         {
+            if (insertionIndex is < 0 || insertionIndex > _frames.Count)
+                throw new ArgumentOutOfRangeException(nameof(insertionIndex));
+
             EditorResourceLimits.EnsureCanInsertFrames(_frames.Count, incoming.Count, "Adding frames");
             await EditorProjectBudget.EnsureTimelineBudgetAsync(
                 _frames.Select(frame => frame.FilePath).Concat(incoming.Select(frame => frame.FilePath)),
@@ -97,8 +101,17 @@ public partial class MainWindow : Window
             throw;
         }
 
-        foreach (var frame in prepared)
-            _frames.Add(frame);
+        if (insertionIndex is { } index)
+        {
+            BoardInsertionPlacement.InsertInto(_frames, prepared, index);
+            FrameListBox.SelectedItems?.Clear();
+            FrameListBox.SelectedIndex = index;
+        }
+        else
+        {
+            foreach (var frame in prepared)
+                _frames.Add(frame);
+        }
 
         if (FrameListBox.SelectedIndex < 0 && _frames.Count > 0)
             FrameListBox.SelectedIndex = 0;

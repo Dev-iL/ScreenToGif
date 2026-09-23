@@ -64,13 +64,25 @@ public partial class App : Application, ICaptureShellHost
         if (Program.StartInOptions)
             return new OptionsWindow();
 
-        if (Program.StartInEditor || LinuxSettings.Current.StartupWindow == LinuxStartupWindow.Editor)
+        if (Program.StartInEditor)
             return CreateEditorWindow();
 
-        var wantsWebcam = Program.StartInWebcam || LinuxSettings.Current.StartupWindow == LinuxStartupWindow.Webcam;
+        var captureKind = Program.StartInWebcam
+            ? CaptureShellKind.Webcam
+            : Program.StartInBoard
+                ? CaptureShellKind.Board
+                : LinuxSettings.Current.StartupWindow switch
+                {
+                    LinuxStartupWindow.Webcam => CaptureShellKind.Webcam,
+                    LinuxStartupWindow.Board => CaptureShellKind.Board,
+                    _ => (CaptureShellKind?)null
+                };
+        if (captureKind is null && LinuxSettings.Current.StartupWindow == LinuxStartupWindow.Editor)
+            return CreateEditorWindow();
+
         // A shell that fails to open has already had StartUp restored by the coordinator, so that one is
         // reused rather than a second StartUp opened beside it.
-        return (wantsWebcam ? OpenCaptureShell(CaptureShellKind.Webcam) : null)
+        return (captureKind is { } kind ? OpenCaptureShell(kind) : null)
                ?? StartupWindows.FirstOrDefault()
                ?? new StartupWindow();
     }
@@ -79,11 +91,11 @@ public partial class App : Application, ICaptureShellHost
     /// The one way a capture shell opens, whichever surface asked. Returns the shell's window when this
     /// call opened one, and null when a shell was already open or the shell refused to show.
     /// </summary>
-    internal Window? OpenCaptureShell(CaptureShellKind kind)
+    internal Window? OpenCaptureShell(CaptureShellKind kind, CaptureShellAdoption adoption = CaptureShellAdoption.ReplaceProject)
     {
         try
         {
-            return CaptureShells.Open(kind) ? CaptureShells.ActiveShell as Window : null;
+            return CaptureShells.Open(kind, adoption) ? CaptureShells.ActiveShell as Window : null;
         }
         catch (Exception exception)
         {
@@ -156,19 +168,22 @@ public partial class App : Application, ICaptureShellHost
     /// Editor from StartUp does. Reports its own failures rather than throwing, because it runs from a
     /// window-closed notification.
     /// </summary>
-    public bool AdoptRecording(LoadedProject recording)
+    public bool AdoptRecording(LoadedProject recording, CaptureShellAdoption adoption)
     {
         ArgumentNullException.ThrowIfNull(recording);
 
         if (Desktop is null)
             return false;
 
-        // A recorder opened from the editor hands its frames back to that editor, which is what
-        // replacing the current project means; only a shell opened from StartUp needs a new one.
+        // A recorder opened from the editor hands its frames back to that editor, replacing its
+        // project or appending to it as the editor asked; only a shell opened from StartUp needs a
+        // new editor, and with no project open there is nothing to append to either way.
         if (Desktop.Windows.OfType<MainWindow>().FirstOrDefault() is { } openEditor)
         {
             Restore(openEditor);
-            _ = openEditor.AdoptRecordedProjectAsync(recording);
+            _ = adoption == CaptureShellAdoption.AppendToProject
+                ? openEditor.InsertRecordedFramesAsync(recording)
+                : openEditor.AdoptRecordedProjectAsync(recording);
             return true;
         }
 
@@ -375,10 +390,15 @@ public partial class App : Application, ICaptureShellHost
         if (Desktop is null)
             return;
 
+        if (target is LinuxTrayWindow.Webcam or LinuxTrayWindow.Board)
+        {
+            OpenCaptureShell(target == LinuxTrayWindow.Board ? CaptureShellKind.Board : CaptureShellKind.Webcam);
+            return;
+        }
+
         Window? existing = target switch
         {
             LinuxTrayWindow.Editor => Desktop.Windows.OfType<MainWindow>().FirstOrDefault(),
-            LinuxTrayWindow.Webcam => Desktop.Windows.OfType<WebcamWindow>().FirstOrDefault(),
             _ => Desktop.Windows.OfType<StartupWindow>().FirstOrDefault()
         };
         if (existing is not null)
@@ -390,7 +410,6 @@ public partial class App : Application, ICaptureShellHost
         var window = target switch
         {
             LinuxTrayWindow.Editor => CreateEditorWindow(),
-            LinuxTrayWindow.Webcam => OpenCaptureShell(CaptureShellKind.Webcam),
             _ => new StartupWindow()
         };
         if (window is null)

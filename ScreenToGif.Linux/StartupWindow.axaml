@@ -92,7 +92,7 @@
                 </StackPanel>
             </Button>
 
-            <Button x:Name="BoardShortcut" Grid.Column="2" Classes="shortcut" Click="OpenBoardClick" ToolTip.Tip="Open the Board GUI scaffold. Drawing and recording are not available yet.">
+            <Button x:Name="BoardShortcut" Grid.Column="2" Classes="shortcut" Click="OpenBoardClick" ToolTip.Tip="Open the Board: draw on a canvas, record what you draw, and send the frames to the editor.">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#FFFFFF" Data="M 39.934,38 L 6.038,38 L 6.038,7.857 L 39.934,7.857 L 39.934,38 Z" />

@@ -4,7 +4,7 @@
 Accepted
 
 ## Area
-Recorder
+Recorder, Board
 
 ## Context
 A recording can fail part way: the X server refuses an image, the disk fills, the workspace becomes unwritable, the project reaches the Editor's 10,000-frame cap, or the PNG encoder falls behind. Encoding runs off the capture thread, so an encoder that cannot keep up does not slow capture down; it queues. Measured on the development machine, a 1080p frame of ordinary desktop content takes longer to encode than the interval 15 fps allows, so the backlog only grows until the process is killed and takes every frame with it. Early versions discarded frames on a write failure, repeated the same error on every tick, and left a Manual recording with no way to take another frame after one transient failure.
@@ -13,6 +13,8 @@ A recording can fail part way: the X server refuses an image, the disk fills, th
 Every recoverable failure gets the same answer: stop capturing, keep every frame already written, and report once, naming the cause in the writer's or source's own words. A paced recording pauses, so the user can fix the cause and resume; resuming clears the one-report latch, because it is the user asking to try again. A Manual recording stays in its stage, because Paused is a stage it could not leave (Snap is unavailable there), and every Snap clears the latch. Stop always hands over the frames already on disk, even after a failure.
 
 The same answer covers two limits. At `EditorResourceLimits.MaximumFramesAt` for the locked region size, the most frames the Editor can still save (see [A recording stops growing where the Editor can still save it](20260923-a-recording-stops-growing-where-the-editor-can-still-save-it.md)), the recording pauses. When the writer reports more than 512 MB handed to it and not yet written, the recording pauses and says frames are arriving faster than they can be saved. The writer reports its backlog; the session decides.
+
+The Board gives the same answer. A frame it cannot save pauses the recording and keeps every frame already taken, and its status keeps the message until the user records again or discards, so the next refresh cannot replace the one line that says why recording stopped. At the frame limit it pauses and cannot resume.
 
 ## Alternatives Considered
 - **Bound the encoder queue and pace capture to it (back-pressure)**: — A pacing policy, trading real per-frame delays for a slower cadence, that the capture decision did not choose and the port had no grounds to choose. Pausing reuses an answer the session already gives a full disk.

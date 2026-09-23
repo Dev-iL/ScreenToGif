@@ -166,7 +166,7 @@ public partial class OptionsWindow : Window
     private void StartupWindowChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (!_ready || StartupWindowComboBox.SelectedIndex
-            is (int)LinuxStartupWindow.Startup or (int)LinuxStartupWindow.Webcam or (int)LinuxStartupWindow.Editor)
+            is (int)LinuxStartupWindow.Startup or (int)LinuxStartupWindow.Webcam or (int)LinuxStartupWindow.Board or (int)LinuxStartupWindow.Editor)
             return;
 
         StartupWindowComboBox.SelectedIndex = (int)LinuxStartupWindow.Startup;

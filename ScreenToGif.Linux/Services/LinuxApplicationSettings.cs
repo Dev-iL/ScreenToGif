@@ -85,6 +85,20 @@ public sealed class LinuxApplicationSettings
 
     public int? RecorderTop { get; set; }
 
+    // Board. Defaults mirror the Windows Board.
+    public string BoardBrushColor { get; set; } = "#000000";
+    public int BoardBrushWidth { get; set; } = 10;
+    public int BoardBrushHeight { get; set; } = 10;
+    public BoardStylusTip BoardBrushTip { get; set; } = BoardStylusTip.Ellipse;
+    public bool BoardFitToCurve { get; set; }
+    public bool BoardHighlighter { get; set; }
+    public int BoardEraserWidth { get; set; } = 10;
+    public int BoardEraserHeight { get; set; } = 10;
+    public BoardStylusTip BoardEraserTip { get; set; } = BoardStylusTip.Rectangle;
+    public int BoardWidth { get; set; } = 798;
+    public int BoardHeight { get; set; } = 387;
+    public int BoardFps { get; set; } = 15;
+
     public LinuxApplicationSettings Copy() => new()
     {
         SingleInstance = SingleInstance,
@@ -123,7 +137,19 @@ public sealed class LinuxApplicationSettings
         RecorderHeight = RecorderHeight,
         RecorderLeft = RecorderLeft,
         RecorderTop = RecorderTop,
-        WebcamFps = WebcamFps
+        WebcamFps = WebcamFps,
+        BoardBrushColor = BoardBrushColor,
+        BoardBrushWidth = BoardBrushWidth,
+        BoardBrushHeight = BoardBrushHeight,
+        BoardBrushTip = BoardBrushTip,
+        BoardFitToCurve = BoardFitToCurve,
+        BoardHighlighter = BoardHighlighter,
+        BoardEraserWidth = BoardEraserWidth,
+        BoardEraserHeight = BoardEraserHeight,
+        BoardEraserTip = BoardEraserTip,
+        BoardWidth = BoardWidth,
+        BoardHeight = BoardHeight,
+        BoardFps = BoardFps
     };
 }
 
@@ -201,7 +227,26 @@ public static class LinuxSettings
 {
     private static readonly LinuxApplicationSettingsStore Store = new();
 
+    private static Task _updates = Task.CompletedTask;
+
     public static LinuxApplicationSettings Current { get; private set; } = Store.Load();
+
+    /// <summary>
+    /// Applies one change to the stored settings, on a single chain so two changes arriving close
+    /// together cannot each copy the store before the other's write lands and drop a field. The
+    /// copy is taken inside the chain for that reason. The returned task carries this change's
+    /// own failure, and a failed write does not stop later ones.
+    /// </summary>
+    public static Task UpdateAsync(Action<LinuxApplicationSettings> change)
+    {
+        _updates = _updates.ContinueWith(_ =>
+        {
+            var updated = Current.Copy();
+            change(updated);
+            return SaveAsync(updated);
+        }, TaskScheduler.Default).Unwrap();
+        return _updates;
+    }
 
     public static async Task SaveAsync(LinuxApplicationSettings settings, CancellationToken cancellationToken = default)
     {

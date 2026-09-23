@@ -54,6 +54,25 @@ public sealed class EditorMutationCoordinatorTests
     }
 
     [Fact]
+    public void InsertingARecordingIntoAnEmptyProjectIsStillUndoable()
+    {
+        var history = new FrameEditHistory();
+        var empty = new EditorSnapshot([], []);
+        var current = empty;
+        var coordinator = new EditorMutationCoordinator(history, () => current, () => { });
+        history.SetBaseline(empty);
+        coordinator.MarkClean();
+
+        current = new EditorSnapshot([new FrameState("board.png", 100)], [0]);
+        coordinator.Commit("Insert recording", empty);
+
+        Assert.True(history.TryUndo(out var undone, out _));
+        Assert.Empty(undone.Frames);
+        Assert.True(history.TryRedo(out var redone, out _));
+        Assert.Equal("board.png", Assert.Single(redone.Frames).FilePath);
+    }
+
+    [Fact]
     public void Refresh_ReturningToCleanFramesClearsDirtyState()
     {
         var history = new FrameEditHistory();
