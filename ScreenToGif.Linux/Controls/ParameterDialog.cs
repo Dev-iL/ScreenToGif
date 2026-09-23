@@ -150,3 +150,37 @@ public sealed class ConfirmDialog : Window
 
     public Task<bool> ShowForAsync(Window owner) => ShowDialog<bool>(owner);
 }
+
+/// <summary>Reports something the user cannot act on beyond acknowledging it.</summary>
+public sealed class MessageDialog : Window
+{
+    public MessageDialog(string title, string message)
+    {
+        Title = title;
+        Width = 420;
+        SizeToContent = SizeToContent.Height;
+        CanResize = false;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Background = Avalonia.Media.Brush.Parse("#25272A");
+        var close = new Button { Content = "Close", MinWidth = 84 };
+        close.Click += (_, _) => Close();
+        Content = new StackPanel
+        {
+            Margin = new Thickness(18),
+            Spacing = 10,
+            Children =
+            {
+                new TextBlock { Text = title, FontSize = 18, FontWeight = Avalonia.Media.FontWeight.SemiBold },
+                new TextBlock { Text = message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Children = { close }
+                }
+            }
+        };
+    }
+
+    public Task ShowForAsync(Window owner) => ShowDialog(owner);
+}

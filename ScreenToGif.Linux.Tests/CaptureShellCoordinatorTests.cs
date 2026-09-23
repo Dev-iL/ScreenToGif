@@ -165,6 +165,90 @@ public sealed class CaptureShellCoordinatorTests
         }
     }
 
+    [Fact]
+    public void AShellThatRecordedNothingGivesStartupBackAndHandsTheEditorNothing()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        host.Created[0].Close();
+
+        Assert.Equal(1, host.Created[0].TakeRecordingCount);
+        Assert.Empty(host.Adopted);
+        Assert.Equal(1, host.RestoreCount);
+        Assert.True(host.StartupVisible);
+    }
+
+    [Fact]
+    public void AShellThatRecordedFramesHandsThemToTheEditorAndLeavesStartupClosed()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var workspace = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-shell-{Guid.NewGuid():N}"));
+        var recording = new LoadedProject(workspace, []);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        host.Created[0].Recording = recording;
+        host.Created[0].Close();
+
+        Assert.Same(recording, Assert.Single(host.Adopted));
+        Assert.Equal(0, host.RestoreCount);
+        Assert.False(host.StartupVisible);
+        Assert.Null(coordinator.ActiveKind);
+    }
+
+    [Fact]
+    public void ARecordingTheEditorRefusesIsReleasedAndStartupComesBack()
+    {
+        var host = new FakeHost { RefuseAdoption = true };
+        var coordinator = new CaptureShellCoordinator(host);
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"stg-shell-{Guid.NewGuid():N}");
+        var recording = new LoadedProject(EditorWorkspace.Create(workspaceRoot), []);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        host.Created[0].Recording = recording;
+        host.Created[0].Close();
+
+        Assert.Empty(host.Adopted);
+        Assert.Equal(1, host.RestoreCount);
+        Assert.True(host.StartupVisible);
+        Assert.False(Directory.Exists(workspaceRoot));
+    }
+
+    [Fact]
+    public void AfterHandingOverARecordingTheCoordinatorCanOpenAnotherShell()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        using var workspace = EditorWorkspace.Create(Path.Combine(Path.GetTempPath(), $"stg-shell-{Guid.NewGuid():N}"));
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        host.Created[0].Recording = new LoadedProject(workspace, []);
+        host.Created[0].Close();
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        Assert.Equal(2, host.Created.Count);
+    }
+
+    [Fact]
+    public void AnAdoptionThatThrowsIsReportedAndTheRecordingIsReleasedInsteadOfEscapingTheCloseHandler()
+    {
+        var host = new FakeHost { AdoptionThrows = true };
+        var coordinator = new CaptureShellCoordinator(host);
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"stg-shell-{Guid.NewGuid():N}");
+        var recording = new LoadedProject(EditorWorkspace.Create(workspaceRoot), []);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Webcam));
+        host.Created[0].Recording = recording;
+        host.Created[0].Close();
+
+        Assert.IsType<IOException>(Assert.Single(host.Reported));
+        Assert.Empty(host.Adopted);
+        Assert.Equal(1, host.RestoreCount);
+        Assert.False(Directory.Exists(workspaceRoot));
+    }
+
     private sealed class FakeHost : ICaptureShellHost
     {
         public List<FakeShell> Created { get; } = [];
@@ -179,6 +263,14 @@ public sealed class CaptureShellCoordinatorTests
 
         public int CloseCount { get; private set; }
 
+        public bool RefuseAdoption { get; set; }
+
+        public bool AdoptionThrows { get; set; }
+
+        public List<Exception> Reported { get; } = [];
+
+        public List<LoadedProject> Adopted { get; } = [];
+
         public ICaptureShellWindow CreateShell(CaptureShellKind kind)
         {
             var shell = new FakeShell(kind, FailNextShow);
@@ -186,6 +278,19 @@ public sealed class CaptureShellCoordinatorTests
             Created.Add(shell);
             return shell;
         }
+
+        public bool AdoptRecording(LoadedProject recording)
+        {
+            if (AdoptionThrows)
+                throw new IOException("Synthetic adoption failure.");
+            if (RefuseAdoption)
+                return false;
+
+            Adopted.Add(recording);
+            return true;
+        }
+
+        public void ReportShellFailure(Exception failure) => Reported.Add(failure);
 
         public void HideStartup()
         {
@@ -213,6 +318,18 @@ public sealed class CaptureShellCoordinatorTests
         public CaptureShellKind Kind { get; } = kind;
 
         public bool HandedOffToEditor { get; set; }
+
+        public LoadedProject? Recording { get; set; }
+
+        public int TakeRecordingCount { get; private set; }
+
+        public LoadedProject? TakeRecording()
+        {
+            TakeRecordingCount++;
+            var recording = Recording;
+            Recording = null;
+            return recording;
+        }
 
         public bool WasShown { get; private set; }
 

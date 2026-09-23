@@ -207,6 +207,27 @@ public partial class MainWindow
         });
     }
 
+    /// <summary>
+    /// Opens the webcam recorder over the editor. A recording with frames replaces the current project
+    /// through the same confirmation Open project uses; closing the recorder with nothing recorded, or
+    /// declining that confirmation, leaves the project untouched.
+    /// </summary>
+    private void NewWebcamRecordingClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Through the application's coordinator, like every other way the recorder opens, so a
+            // second click cannot put two recorders on one camera. Closing it with frames hands them
+            // back to this editor, because an editor already open is the adoption target.
+            if (App.CurrentApp?.OpenCaptureShell(CaptureShellKind.Webcam) is null)
+                SetStatus("A capture window is already open.");
+        }
+        catch (Exception ex)
+        {
+            SetError(ex);
+        }
+    }
+
     private async void RecentProjectsClick(object? sender, RoutedEventArgs e)
     {
         try
@@ -293,6 +314,40 @@ public partial class MainWindow
                 ? $"Loaded {loaded.Frames.Count} frame(s) from {Path.GetFileName(path)}."
                 : $"Loaded {loaded.Frames.Count} frame(s) from {Path.GetFileName(path)}, but the recent-project list could not be updated.");
         });
+    }
+
+    /// <summary>
+    /// Opens a capture shell's recording in this editor, behind the same unsaved-work confirmation that
+    /// opening a project asks for. Takes ownership of the recording, releasing it when the confirmation
+    /// is declined or the load fails. The frames arrive unsaved, so the editor stays dirty.
+    /// </summary>
+    public async Task AdoptRecordedProjectAsync(LoadedProject recording)
+    {
+        ArgumentNullException.ThrowIfNull(recording);
+
+        try
+        {
+            if (!await ConfirmProjectReplacementAsync("open the recording"))
+                return;
+
+            await RunOperationAsync("Load recording", async cancellationToken =>
+            {
+                SetStatus("Loading the recording...");
+                await ReplaceActiveProjectAsync(recording, cancellationToken);
+                UpdateDirtyState();
+                SetStatus($"Loaded {_frames.Count} recorded frame(s).");
+            });
+        }
+        catch (Exception ex)
+        {
+            SetError(ex);
+        }
+        finally
+        {
+            // A no-op once the project was adopted, and the release path for every route that did not
+            // reach the adoption: a declined confirmation, a busy editor, or a failed load.
+            recording.Dispose();
+        }
     }
 
     private async Task<bool> ConfirmProjectReplacementAsync(string action)

@@ -27,7 +27,7 @@ public sealed class EditorWorkspace : IDisposable
         {
             Directory.CreateDirectory(RootPath);
             using var process = Process.GetCurrentProcess();
-            File.WriteAllText(Path.Combine(RootPath, OwnerFileName), $"{process.Id}|{process.StartTime.ToUniversalTime().Ticks}");
+            WriteOwnerMarker($"{process.Id}|{process.StartTime.ToUniversalTime().Ticks}");
         }
         catch
         {
@@ -37,6 +37,27 @@ public sealed class EditorWorkspace : IDisposable
     }
 
     public string RootPath { get; }
+
+    /// <summary>
+    /// Publishes the owner marker in one rename. The scavenger deletes any workspace whose marker it
+    /// cannot parse, so a marker that is readable while still half-written would let a concurrent
+    /// scavenge — another instance starting up, for one — delete a workspace that is in active use.
+    /// </summary>
+    private void WriteOwnerMarker(string owner)
+    {
+        var finalPath = Path.Combine(RootPath, OwnerFileName);
+        var temporaryPath = $"{finalPath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temporaryPath, owner);
+            File.Move(temporaryPath, finalPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
 
     public static EditorWorkspace Create(string? rootPath = null) => new(rootPath ?? Path.Combine(
         Path.GetTempPath(), WorkspaceRootName, Guid.NewGuid().ToString("N")));

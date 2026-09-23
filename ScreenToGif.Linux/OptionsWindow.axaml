@@ -161,7 +161,7 @@
                                 <ComboBox x:Name="StartupWindowComboBox" Grid.Column="1" Classes="setting" SelectionChanged="StartupWindowChanged">
                                     <ComboBoxItem Content="Startup window" />
                                     <ComboBoxItem Content="Screen recorder" IsEnabled="False" ToolTip.Tip="Screen recording is not available on Linux yet." />
-                                    <ComboBoxItem Content="Webcam recorder" IsEnabled="False" ToolTip.Tip="Webcam recording is not available on Linux yet." />
+                                    <ComboBoxItem Content="Webcam recorder" ToolTip.Tip="Open the webcam recorder instead of the StartUp window." />
                                     <ComboBoxItem Content="Board recorder" IsEnabled="False" ToolTip.Tip="Board recording is not available on Linux yet." />
                                     <ComboBoxItem Content="Editor" />
                                 </ComboBox>
@@ -193,7 +193,7 @@
                                 </ComboBox>
                                 <TextBlock x:Name="LeftWindowLabel" Grid.Column="2" Classes="label" Text="Or else, opens:" Margin="7,0,4,0" />
                                 <ComboBox x:Name="LeftWindowComboBox" Grid.Column="3" Classes="setting">
-                                    <ComboBoxItem Content="No window" /><ComboBoxItem Content="Startup window" /><ComboBoxItem Content="Screen recorder" IsEnabled="False" /><ComboBoxItem Content="Webcam recorder" IsEnabled="False" /><ComboBoxItem Content="Board recorder" IsEnabled="False" /><ComboBoxItem Content="Editor" />
+                                    <ComboBoxItem Content="No window" /><ComboBoxItem Content="Startup window" /><ComboBoxItem Content="Screen recorder" IsEnabled="False" /><ComboBoxItem Content="Webcam recorder" /><ComboBoxItem Content="Board recorder" IsEnabled="False" /><ComboBoxItem Content="Editor" />
                                 </ComboBox>
 
                                 <TextBlock Grid.Row="1" Classes="label" Text="Left click (x2):" Margin="2,0,3,0" />

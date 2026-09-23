@@ -5,6 +5,15 @@ namespace ScreenToGif.Linux.Services;
 
 public sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
+/// <summary>
+/// FFmpeg itself could not be launched, as opposed to media it could not read. A distinct type so a
+/// caller can say which of the two happened without matching on the message text, and so the phrase
+/// is written once next to the launch that produces it.
+/// </summary>
+public sealed class FfmpegUnavailableException(string executable, Exception inner)
+    : InvalidOperationException(
+        $"'{executable}' was not found. Install FFmpeg or set its path in Options.", inner);
+
 public interface IFfmpegTool
 {
     Task<ProcessResult> RunFfmpegAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default);
@@ -15,8 +24,11 @@ public interface IFfmpegTool
 
 public sealed class FfmpegTool : IFfmpegTool
 {
+    /// <summary>The FFmpeg command every caller launches, whether through this tool or as a long-lived child.</summary>
+    public static string ResolveFfmpegExecutable() => Resolve("SCREENTOGIF_FFMPEG", "ffmpeg");
+
     public Task<ProcessResult> RunFfmpegAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default) =>
-        RunAsync(Resolve("SCREENTOGIF_FFMPEG", "ffmpeg"), arguments, cancellationToken);
+        RunAsync(ResolveFfmpegExecutable(), arguments, cancellationToken);
 
     public Task<ProcessResult> RunFfprobeAsync(IEnumerable<string> arguments, CancellationToken cancellationToken = default) =>
         RunAsync(Resolve("SCREENTOGIF_FFPROBE", "ffprobe"), arguments, cancellationToken);
@@ -63,7 +75,7 @@ public sealed class FfmpegTool : IFfmpegTool
         }
         catch (Exception ex) when (ex is Win32Exception or FileNotFoundException)
         {
-            throw new InvalidOperationException($"'{executable}' was not found. Install FFmpeg or set the corresponding SCREENTOGIF_* environment variable.", ex);
+            throw new FfmpegUnavailableException(executable, ex);
         }
 
         var outputTask = process.StandardOutput.ReadToEndAsync();

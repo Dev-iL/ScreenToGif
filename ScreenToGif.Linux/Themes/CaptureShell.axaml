@@ -76,4 +76,92 @@
         <Setter Property="Margin" Value="5,3" />
         <Setter Property="Background" Value="#555A60" />
     </Style>
+
+    <!-- Webcam recorder only. The screen recorder's bar is pinned by its command-bar ADR, so the
+         webcam's own bar treatment is scoped to its window rather than restyling every capture shell.
+         These come last so they win over the shared rules above. -->
+    <Style Selector="Window.capture-shell.webcam-shell Button.capture-tool, Window.capture-shell.webcam-shell ToggleButton.capture-tool, Window.capture-shell.webcam-shell Button.capture-command, Window.capture-shell.webcam-shell ToggleButton.capture-command">
+        <Setter Property="Height" Value="26" />
+    </Style>
+    <!-- Avalonia's own disabled brushes are lighter than this bar's background, which would make an
+         unavailable control the heaviest thing in the row; these hold the flat treatment and fade. -->
+    <Style Selector="Window.capture-shell.webcam-shell Button:disabled, Window.capture-shell.webcam-shell ToggleButton:disabled, Window.capture-shell.webcam-shell NumericUpDown:disabled, Window.capture-shell.webcam-shell ComboBox:disabled, Window.capture-shell.webcam-shell CheckBox:disabled">
+        <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell Button.capture-tool:disabled, Window.capture-shell.webcam-shell Button.capture-command:disabled">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell Button.capture-tool:disabled /template/ ContentPresenter, Window.capture-shell.webcam-shell Button.capture-command:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell Button.capture-tool:pointerover /template/ ContentPresenter, Window.capture-shell.webcam-shell Button.capture-command:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#31353A" />
+        <Setter Property="BorderBrush" Value="#60656B" />
+    </Style>
+    <!-- One height, one fill and one radius for both inputs in the bar, so adjacent fields do not
+         read as two different systems. -->
+    <Style Selector="Window.capture-shell.webcam-shell ComboBox, Window.capture-shell.webcam-shell NumericUpDown">
+        <Setter Property="Height" Value="26" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Foreground" Value="#E1E4E8" />
+        <Setter Property="Background" Value="#2B2E32" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="6,0" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell ComboBox">
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell NumericUpDown">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell NumericUpDown /template/ TextBox">
+        <Setter Property="Foreground" Value="#E1E4E8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Padding" Value="7,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="TextAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell NumericUpDown /template/ TextBox /template/ DockPanel">
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- The spinner is the numeric field's visible chrome, so its fill goes here; a border set on it
+         is drawn around each template part rather than the field, which is why both inputs separate
+         themselves with a fill alone. -->
+    <Style Selector="Window.capture-shell.webcam-shell NumericUpDown /template/ ButtonSpinner">
+        <Setter Property="Foreground" Value="#B9BEC5" />
+        <Setter Property="Background" Value="#2B2E32" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <!-- The status panel's Details disclosure should read as a toggle in running text, not as the
+         filled block Avalonia's Expander defaults to. -->
+    <Style Selector="Window.capture-shell.webcam-shell Expander">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell Expander /template/ ToggleButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Foreground" Value="#B9BEC5" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="Window.capture-shell.webcam-shell Expander /template/ ToggleButton /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
 </Styles>

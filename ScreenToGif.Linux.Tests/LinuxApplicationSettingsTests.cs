@@ -177,7 +177,8 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
             DeleteCacheOnClose = true,
             RemoveOldProjects = false,
             ProjectRetentionDays = 14,
-            FfmpegPath = "/opt/ffmpeg/bin/ffmpeg"
+            FfmpegPath = "/opt/ffmpeg/bin/ffmpeg",
+            WebcamFps = 24
         };
 
         await store.SaveAsync(expected);
@@ -207,6 +208,7 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
         Assert.Equal(expected.RemoveOldProjects, actual.RemoveOldProjects);
         Assert.Equal(expected.ProjectRetentionDays, actual.ProjectRetentionDays);
         Assert.Equal(expected.FfmpegPath, actual.FfmpegPath);
+        Assert.Equal(expected.WebcamFps, actual.WebcamFps);
     }
 
     [Fact]
@@ -222,6 +224,59 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
         Assert.Equal(LinuxAppTheme.Dark, settings.Theme);
         Assert.Equal(LinuxStartupWindow.Startup, settings.StartupWindow);
         Assert.False(settings.StartMinimized);
+        Assert.Equal(15, settings.WebcamFps);
+    }
+
+    [Fact]
+    public void WebcamFpsDefaultsToFifteen()
+    {
+        Assert.Equal(15, new LinuxApplicationSettings().WebcamFps);
+    }
+
+    [Fact]
+    public void SettingsWrittenBeforeWebcamFpsExistedLoadAsFifteen()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "settings.json");
+        File.WriteAllText(path, """{ "Theme": "Light", "UndoLimit": 12 }""");
+
+        var settings = new LinuxApplicationSettingsStore(path).Load();
+
+        Assert.Equal(LinuxAppTheme.Light, settings.Theme);
+        Assert.Equal(12, settings.UndoLimit);
+        Assert.Equal(15, settings.WebcamFps);
+    }
+
+    [Theory]
+    [InlineData(0, WebcamRecordingSession.MinimumFps)]
+    [InlineData(-5, WebcamRecordingSession.MinimumFps)]
+    [InlineData(999, WebcamRecordingSession.MaximumFps)]
+    public void StoredWebcamFpsOutsideTheSupportedRangeIsClampedOnLoad(int stored, int expected)
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "settings.json");
+        File.WriteAllText(path, $$"""{ "WebcamFps": {{stored}} }""");
+
+        var settings = new LinuxApplicationSettingsStore(path).Load();
+
+        Assert.Equal(expected, settings.WebcamFps);
+    }
+
+    [Fact]
+    public async Task WebcamFpsRoundTripsThroughSaveAndLoad()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        var store = new LinuxApplicationSettingsStore(path);
+
+        await store.SaveAsync(new LinuxApplicationSettings { WebcamFps = 30 });
+
+        Assert.Equal(30, store.Load().WebcamFps);
+    }
+
+    [Fact]
+    public void CopyCarriesWebcamFps()
+    {
+        Assert.Equal(48, new LinuxApplicationSettings { WebcamFps = 48 }.Copy().WebcamFps);
     }
 
     [Fact]

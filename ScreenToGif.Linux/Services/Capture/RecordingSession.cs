@@ -342,6 +342,14 @@ public sealed class RecordingSession : IAsyncDisposable
             return;
         }
 
+        // Resuming at the bound is allowed, since Paused is where every failure leaves the user, but
+        // it must not take the one frame that would make the project unsavable.
+        if (_delays.Count >= MaximumFrames)
+        {
+            PauseAtFrameCap();
+            return;
+        }
+
         CapturedFrame frame;
         try
         {
@@ -361,7 +369,7 @@ public sealed class RecordingSession : IAsyncDisposable
         _lastCaptureMs = now;
         _writer.Write(frame);
 
-        if (_delays.Count >= EditorResourceLimits.MaximumProjectFrames)
+        if (_delays.Count >= MaximumFrames)
         {
             PauseAtFrameCap();
             return;
@@ -375,11 +383,17 @@ public sealed class RecordingSession : IAsyncDisposable
             PauseAtEncoderBacklog();
     }
 
+    /// <summary>
+    /// The most frames the editor can still save at the locked region size. The frame limit alone is
+    /// not enough: at 1920x1080 the decoded-pixel limit arrives after 482 frames.
+    /// </summary>
+    private int MaximumFrames => EditorResourceLimits.MaximumFramesAt(_lockedSize.Width, _lockedSize.Height);
+
     private void PauseAtFrameCap()
     {
         Park(RecordingStage.Paused);
         RaiseError(
-            $"Recording paused at the {EditorResourceLimits.MaximumProjectFrames:N0}-frame project limit. " +
+            $"Recording paused at {MaximumFrames:N0} frames, the most the editor can save at this size. " +
             "Stop to keep what was recorded.");
     }
 

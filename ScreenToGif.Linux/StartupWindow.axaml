@@ -79,7 +79,7 @@
                 </StackPanel>
             </Button>
 
-            <Button x:Name="WebcamShortcut" Grid.Column="1" Classes="shortcut" Click="OpenWebcamClick" ToolTip.Tip="Open the Webcam GUI scaffold. Camera capture is not available yet.">
+            <Button x:Name="WebcamShortcut" Grid.Column="1" Classes="shortcut" Click="OpenWebcamClick" ToolTip.Tip="Open the webcam recorder. Preview a camera and record it into the Editor.">
                 <StackPanel Spacing="5">
                     <Canvas Width="40" Height="40" HorizontalAlignment="Center">
                         <Path Fill="#FFFFFF" Data="F1 M 31.721,25.054 L 6.123,25.054 L 6.123,6.576 L 31.721,6.576 L 31.721,25.054 Z" />

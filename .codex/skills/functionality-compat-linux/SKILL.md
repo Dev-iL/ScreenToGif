@@ -7,7 +7,7 @@ description: Port ScreenToGif behavior from Windows/WPF to the Avalonia Linux ap
 
 Preserve the Windows user contract rather than copying Windows/WPF implementation details. For editor work, extend the existing normalized-PNG model and keep commands complete at the user boundary: define selection rules, validate parameters, preserve work on cancellation or failure, refresh timeline/preview/status state, and include the mutation in shared history when it changes frames, order, or timing.
 
-Webcam and Board capture, Windows `.stg` compatibility, and a general vector-annotation canvas require foundations beyond an isolated editor command. Do not approximate such a dependency inside the caller; when it is outside the current task, keep the control unavailable and identify the missing subsystem instead of leaving it accidentally inert.
+Board capture, Windows `.stg` compatibility, and a general vector-annotation canvas require foundations beyond an isolated editor command. Do not approximate such a dependency inside the caller; when it is outside the current task, keep the control unavailable and identify the missing subsystem instead of leaving it accidentally inert.
 
 ## Task router
 
@@ -16,6 +16,7 @@ Read only the references needed for the active surface:
 - First-time component parity or an unclear Windows behavior: [references/porting-workflow.md](references/porting-workflow.md)
 - Options, settings persistence, autostart, tray behavior, or application startup/lifetime: [references/options.md](references/options.md)
 - Screen capture, the Recorder window, or anything driving the built app against an X server: [references/recorder.md](references/recorder.md)
+- The Webcam recorder, camera devices, or any capture window that owns a long-lived FFmpeg child: [references/webcam.md](references/webcam.md)
 - Any command that mutates frames, order, timing, selection, or project state: [references/editor-session.md](references/editor-session.md)
 - Image transforms or their reusable FFmpeg/history foundation: [references/image.md](references/image.md)
 - Fade or directional Slide generation: [references/transitions.md](references/transitions.md)

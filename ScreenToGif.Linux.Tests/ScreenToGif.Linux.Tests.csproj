@@ -23,4 +23,14 @@
   <ItemGroup>
     <ProjectReference Include="../ScreenToGif.Linux/ScreenToGif.Linux.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Test collections run one at a time. Several tests here drive real FFmpeg processes and write
+      large trees under the shared temp directory, and running those collections against each other
+      made unrelated tests fail intermittently on a loaded machine. Serial collections cost a couple
+      of seconds and make the suite's result depend on the code rather than on the machine.
+    -->
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -502,6 +502,42 @@ public sealed class RecordingSessionTests
     }
 
     [Fact]
+    public async Task A_large_region_pauses_where_the_editor_can_still_save_it_and_resuming_adds_nothing()
+    {
+        // 4000x4000 is 16 million pixels a frame, so the one-billion-pixel limit arrives at 62 frames,
+        // long before the 10,000-frame limit.
+        var harness = new Harness(new RecordingSettings { FramesPerSecond = 10 });
+        harness.Region = new PixelRect(0, 0, 4000, 4000);
+        var errors = new List<string>();
+        harness.Session.Error += (_, args) => errors.Add(args.Message);
+        var bound = EditorResourceLimits.MaximumFramesAt(4000, 4000);
+        Assert.Equal(62, bound);
+
+        harness.Session.Record();
+        for (var i = 0; i < bound + 5; i++)
+        {
+            harness.Session.Tick();
+            harness.Clock.Advance(100);
+        }
+
+        Assert.Equal(bound, harness.Session.FrameCount);
+        Assert.Equal(RecordingStage.Paused, harness.Session.Stage);
+        Assert.Contains($"{bound:N0} frames", Assert.Single(errors));
+
+        // Resuming is allowed, because Paused is where every failure leaves the user, but the next
+        // capture pauses again instead of taking the frame that would make the project unsavable.
+        harness.Session.Record();
+        harness.Clock.Advance(100);
+        harness.Session.Tick();
+
+        Assert.Equal(bound, harness.Session.FrameCount);
+        Assert.Equal(RecordingStage.Paused, harness.Session.Stage);
+
+        var frames = await harness.Session.StopAsync();
+        Assert.Equal(bound, frames.Count);
+    }
+
+    [Fact]
     public async Task A_recording_pauses_when_the_encoder_falls_far_enough_behind()
     {
         var harness = new Harness(new RecordingSettings { FramesPerSecond = 10 });

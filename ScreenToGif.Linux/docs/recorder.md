@@ -41,7 +41,7 @@ With a pre-start countdown enabled, Record counts down in the command bar before
 
 ## Limits
 
-A recording stops growing at 10,000 frames, the Editor's project limit. The Recorder pauses at that point and keeps everything it captured, so Stop still opens it in the Editor.
+A recording stops growing at the most frames the Editor can still save at the recorded size. The Editor holds at most 10,000 frames and one billion pixels in all, so the pixel limit usually comes first: 482 frames at 1920x1080, about 32 seconds at 15 fps. The Recorder pauses at that point and keeps everything it captured, so Stop still opens it in the Editor. Resuming pauses again straight away.
 
 Frames are saved on a thread of their own, so a large frame at a high frame rate can arrive faster than it can be written. The Recorder pauses and says so when enough unsaved frames have built up, rather than filling memory until the application is killed. Stop still opens what was captured; a smaller frame or a lower frame rate lets the next recording run on.
 

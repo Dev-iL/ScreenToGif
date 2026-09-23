@@ -159,12 +159,17 @@ public partial class OptionsWindow : Window
         UpdateDependencies();
     }
 
+    /// <summary>
+    /// Startup, the webcam recorder and the editor can all be opened first. The screen and board
+    /// recorders are still previews, so choosing one falls back to the StartUp window.
+    /// </summary>
     private void StartupWindowChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (!_ready || StartupWindowComboBox.SelectedIndex is 0 or 4)
+        if (!_ready || StartupWindowComboBox.SelectedIndex
+            is (int)LinuxStartupWindow.Startup or (int)LinuxStartupWindow.Webcam or (int)LinuxStartupWindow.Editor)
             return;
 
-        StartupWindowComboBox.SelectedIndex = 0;
+        StartupWindowComboBox.SelectedIndex = (int)LinuxStartupWindow.Startup;
     }
 
     private void TrayDependencyChanged(object? sender, RoutedEventArgs e)

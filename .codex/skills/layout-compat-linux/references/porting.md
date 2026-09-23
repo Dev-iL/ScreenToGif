@@ -7,6 +7,7 @@
 | Startup | `ScreenToGif/Windows/Other/Startup.xaml` | `ScreenToGif.Linux/StartupWindow.axaml` |
 | Editor shell and ribbon | `ScreenToGif/Windows/Editor.xaml` | `ScreenToGif.Linux/MainWindow.axaml` |
 | Recorder frame and command bar | `ScreenToGif/Windows/Recorder.xaml` and `Recorder.xaml.cs` | `ScreenToGif.Linux/RecorderWindow.axaml` with `Themes/CaptureShell.axaml` |
+| Webcam preview and command bar | `ScreenToGif/Windows/Webcam.xaml` and `Webcam.xaml.cs` | `ScreenToGif.Linux/WebcamWindow.axaml` with the `Window.capture-shell.webcam-shell` block in `Themes/CaptureShell.axaml` |
 | Repeated button layout | `ScreenToGif/Controls/ExtendedButton.cs` and `ScreenToGif/Themes/Button.xaml` | A ScreenToGif-specific Avalonia button and `ControlTheme` |
 | Window chrome | `ScreenToGif/Controls/ExWindow.cs` | Native Avalonia chrome unless a requested visual mismatch requires a bounded replacement |
 
@@ -38,7 +39,25 @@ Copying a WPF height is not enough where a Fluent template carries a larger mini
 
 Fluent draws a filled background on a disabled `Button` through its template's `PART_ContentPresenter`, which overrides a transparent `Background` set on the button. On a dark tool bar that fill reads as a pressed or checked tool. Clear it with a `:disabled /template/ ContentPresenter#PART_ContentPresenter` style that sets `Background` and `BorderBrush` to transparent, and keep disabled state to opacity.
 
-Both were found by sampling pixels in a real render, not by reading markup; see [verification](verification.md).
+Fluent's disabled foreground and fill brushes are brighter than the capture shells' dark command bar, so a disabled button rendered heavier than its enabled neighbours and the one control that could not be pressed was the boldest thing in the row. Keep disabled tools flat and fade them with opacity instead of letting the theme's disabled brushes through.
+
+A `NumericUpDown` in the command bar inherited a dark foreground and showed its value dark on dark, so the field looked empty. Set its `Foreground` explicitly, and confirm the value is visible in a capture rather than in the markup.
+
+Fluent's `Expander` paints its header's hover and pressed states from theme resources (`ExpanderHeaderBackgroundPointerOver`, `ExpanderChevronBackgroundPointerOver` and their siblings) that a `/template/ ToggleButton` style does not reach. On a dark panel the hover state drew a black strip across the header. Override those brushes in the `Expander`'s own `Resources`, where the theme looks them up; a style `Foreground` setter on the toggle also outranks the theme's hover foreground, so do not add resources that it will shadow.
+
+Both of the first two were found by sampling pixels in a real render, not by reading markup; see [verification](verification.md). The `Expander` strip only appears while the pointer rests on the header, which is where a screenshot taken straight after clicking it leaves the pointer.
+
+## Capture-shell command bars
+
+`Themes/CaptureShell.axaml` is shared by every capture shell, and the Recorder's command bar is pinned by an ADR. Scope a shell's own restyling to a class on its window, as the Webcam does with `Classes="capture-shell webcam-shell"` and a `Window.capture-shell.webcam-shell` selector block, rather than editing the shared rules. Two branches that each restyled the shared rules for their own shell collided in a rebase, and either resolution would have changed the other shell's bar.
+
+Take a shell's minimum width from what its command bar needs, not from the capture size. The Webcam window sized itself from the camera frame, so a 640x480 camera at the default half scale opened it at 420 pixels and carried Stop off the right edge; its minimum is now the bar's width and the scale clamps to it.
+
+Give a live counter, such as a frame count updated fifteen times a second, a fixed minimum width and tabular figures (`FontFeatures="tnum"`), or it reflows the controls beside it on every update.
+
+## Icon registry
+
+`WindowsIcon` registers its glyphs with indexer initialisers (`["Pause"] = …`), so a duplicate key does not fail the build: the later entry silently replaces the earlier one. When merging branches that each added icons, search the registry for repeated keys; a webcam branch's `Pause` entry once repainted the Recorder's pause glyph this way.
 
 ## Known baseline: startup
 

@@ -1,8 +1,8 @@
 # ScreenToGif for Linux
 
-This is the Avalonia-based Linux application. It records a region of the screen, edits the result on a timeline, and exports it. The Webcam and Board interfaces remain navigable previews. The original `GifRecorder.sln` remains the Windows application.
+This is the Avalonia-based Linux application. It records a region of the screen or a webcam, edits the result on a timeline, and exports it. The Board interface remains a navigable preview. The original `GifRecorder.sln` remains the Windows application.
 
-Detailed behavior and limits are documented for the [Recorder](docs/recorder.md) and for each editor ribbon tab in [`docs/editor`](docs/editor/).
+Detailed behavior and limits are documented for the [Recorder](docs/recorder.md), the [Webcam recorder](docs/webcam.md), and each editor ribbon tab in [`docs/editor`](docs/editor/).
 
 ## Requirements
 
@@ -48,10 +48,11 @@ dotnet test ScreenToGif.Linux.Tests/ScreenToGif.Linux.Tests.csproj --no-restore
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build
 ```
 
-The default launch opens the StartUp window. Its Recorder, Webcam, Board, and Editor destinations are reachable, and the Options button opens the Linux application settings. To open the editor directly:
+The default launch opens the StartUp window. Its Recorder, Webcam, Board, and Editor destinations are reachable, and the Options button opens the Linux application settings. To open the editor or the webcam recorder directly:
 
 ```bash
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build -- --editor
+dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build -- --webcam
 ```
 
 ### Make shortcuts
@@ -87,8 +88,10 @@ This copies the icon and launcher to `~/.local/share`, so no root access is need
 
 The Recorder captures a rectangle of the screen at a chosen frame rate, or one frame at a time, and hands the result to the Editor. It needs an X11 session: under a native Wayland session Record is disabled and says why. Window snapping, user-interaction capture, cursor following, guidelines, and desktop-wide hotkeys are not available; [`docs/recorder.md`](docs/recorder.md) lists each unavailable control beside the subsystem it needs, and [`docs/recorder-followups.md`](docs/recorder-followups.md) describes what each would take.
 
+The Webcam recorder discovers the machine's cameras through V4L2, previews the selected one, and records it into the Editor. It needs read access to a `/dev/video*` node, which on most distributions means membership in the `video` group. See [`docs/webcam.md`](docs/webcam.md).
+
 The Editor imports still images, animated GIF/APNG files, and common video formats; supports frame selection, reordering, deletion, and timing changes; saves self-contained `.stg-linux` projects; and exports GIF, APNG, MP4, and WebM. Options provides the Linux application settings.
 
-Webcam and Board are navigable interface scaffolds. A scaffold is a visual preview of an interface without its product functionality. These windows do not discover or use cameras, accept Board drawing, record frames, create projects, or hand work to the Editor. Their unavailable controls remain disabled and explain the missing capability in tooltips.
+Board is a navigable interface scaffold. A scaffold is a visual preview of an interface without its product functionality. It does not accept drawing, record frames, create projects, or hand work to the Editor. Its unavailable controls remain disabled and explain the missing capability in tooltips.
 
 The Linux application does not support Windows `.stg` compatibility or the Windows editor's advanced annotation/effects commands.

@@ -12,7 +12,7 @@ Encoding a bitmap needs a registered `IPlatformRenderInterface`. The application
 
 ## Driving the built application
 
-Never use `pkill -f ScreenToGif.Linux`. More than one agent or session may be driving the application at once; kill by PID. Launching the built binary directly rather than through `dotnet run` gives an exact PID to scope every `xdotool` call to.
+Never use `pkill -f ScreenToGif.Linux`. More than one agent or session may be driving the application at once, and a pattern broad enough to match the app also matches the shell running `pkill`, which then kills itself; kill by PID. Launching the built binary (`ScreenToGif.Linux/bin/Debug/net9.0/ScreenToGif.Linux`) directly rather than through `dotnet run` gives an exact PID to scope every `xdotool` call to. Under `setsid … &` the PID the shell reports belongs to `setsid`, which exits at once; find your own process by matching the scratch config in its environment: `for p in $(pgrep -f net9.0/ScreenToGif.Linux); do grep -qz "XDG_CONFIG_HOME=$SCRATCH/cfg" /proc/$p/environ && echo $p; done`.
 
 On the user's real session, verify the window under the pointer belongs to your own process before every synthetic click. `xdotool windowactivate` does not guarantee the window is on top, and a click at the right coordinates can land in someone else's window. During this port two clicks reached the user's unrelated editor that way.
 

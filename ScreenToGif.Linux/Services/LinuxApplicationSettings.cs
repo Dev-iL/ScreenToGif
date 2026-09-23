@@ -64,6 +64,7 @@ public sealed class LinuxApplicationSettings
     public bool RemoveOldProjects { get; set; } = true;
     public int ProjectRetentionDays { get; set; } = 5;
     public string FfmpegPath { get; set; } = "ffmpeg";
+    public int WebcamFps { get; set; } = 15;
 
     // Recorder. Defaults mirror the Windows recorder so a user moving between them is not surprised.
     public RecorderCaptureMode RecorderCaptureMode { get; set; } = RecorderCaptureMode.PerSecond;
@@ -121,7 +122,8 @@ public sealed class LinuxApplicationSettings
         RecorderWidth = RecorderWidth,
         RecorderHeight = RecorderHeight,
         RecorderLeft = RecorderLeft,
-        RecorderTop = RecorderTop
+        RecorderTop = RecorderTop,
+        WebcamFps = WebcamFps
     };
 }
 
@@ -145,15 +147,22 @@ public sealed class LinuxApplicationSettingsStore
         try
         {
             if (!File.Exists(Path))
-                return new LinuxApplicationSettings();
+                return Normalize(new LinuxApplicationSettings());
 
-            return JsonSerializer.Deserialize<LinuxApplicationSettings>(File.ReadAllText(Path), JsonOptions)
-                   ?? new LinuxApplicationSettings();
+            return Normalize(JsonSerializer.Deserialize<LinuxApplicationSettings>(File.ReadAllText(Path), JsonOptions)
+                             ?? new LinuxApplicationSettings());
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            return new LinuxApplicationSettings();
+            return Normalize(new LinuxApplicationSettings());
         }
+    }
+
+    /// <summary>Brings a value that a hand-edited or outdated file may hold out of range back into it.</summary>
+    private static LinuxApplicationSettings Normalize(LinuxApplicationSettings settings)
+    {
+        settings.WebcamFps = Math.Clamp(settings.WebcamFps, WebcamRecordingSession.MinimumFps, WebcamRecordingSession.MaximumFps);
+        return settings;
     }
 
     public async Task SaveAsync(LinuxApplicationSettings settings, CancellationToken cancellationToken = default)
