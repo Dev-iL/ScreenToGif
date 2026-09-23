@@ -1,5 +1,5 @@
-using System.Runtime.InteropServices;
 using Avalonia;
+using System.Runtime.InteropServices;
 
 namespace ScreenToGif.Linux.Services;
 

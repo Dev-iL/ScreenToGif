@@ -1,12 +1,8 @@
 # ScreenToGif for Linux
 
-This is the Avalonia-based Linux application. It provides a working timeline
-editor, application settings, and navigable previews of the Recorder, Webcam,
-and Board interfaces. The original `GifRecorder.sln` remains the Windows
-application.
+This is the Avalonia-based Linux application. It records a region of the screen, edits the result on a timeline, and exports it. The Webcam and Board interfaces remain navigable previews. The original `GifRecorder.sln` remains the Windows application.
 
-Detailed behavior and limits for each ribbon tab are documented in
-[`docs/editor`](docs/editor/).
+Detailed behavior and limits are documented for the [Recorder](docs/recorder.md) and for each editor ribbon tab in [`docs/editor`](docs/editor/).
 
 ## Requirements
 
@@ -14,25 +10,18 @@ To build from source, install:
 
 - a 64-bit Linux desktop session (X11 or Wayland);
 - the [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or newer;
-- [FFmpeg](https://ffmpeg.org/), including both `ffmpeg` and `ffprobe` on
-  `PATH`.
+- [FFmpeg](https://ffmpeg.org/), including both `ffmpeg` and `ffprobe` on `PATH`.
 
-On Ubuntu, once the Microsoft .NET package feed is configured, the usual
-development dependencies are:
+On Ubuntu, once the Microsoft .NET package feed is configured, the usual development dependencies are:
 
 ```bash
 sudo apt update
 sudo apt install dotnet-sdk-9.0 ffmpeg
 ```
 
-Most desktop distributions already include the native libraries Avalonia needs.
-For a minimal installation, install the distribution equivalents of
-`fontconfig`, `freetype`, `libX11`, `libX11-xcb`, `libXrender`, `libICE`, and
-`libSM` as well.
+Most desktop distributions already include the native libraries Avalonia needs. For a minimal installation, install the distribution equivalents of `fontconfig`, `freetype`, `libX11`, `libX11-xcb`, `libXrender`, `libICE`, and `libSM` as well.
 
-FFmpeg is required at runtime for animated-image/video import and for every
-export. MP4 and WebM export additionally require an FFmpeg build containing the
-`libx264` and `libvpx-vp9` encoders. Check the setup with:
+FFmpeg is required at runtime for animated-image/video import and for every export. MP4 and WebM export additionally require an FFmpeg build containing the `libx264` and `libvpx-vp9` encoders. Check the setup with:
 
 ```bash
 dotnet --version
@@ -59,9 +48,7 @@ dotnet test ScreenToGif.Linux.Tests/ScreenToGif.Linux.Tests.csproj --no-restore
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build
 ```
 
-The default launch opens the StartUp window. Its Recorder, Webcam, Board, and
-Editor destinations are reachable, and the Options button opens the Linux
-application settings. To open the editor directly:
+The default launch opens the StartUp window. Its Recorder, Webcam, Board, and Editor destinations are reachable, and the Options button opens the Linux application settings. To open the editor directly:
 
 ```bash
 dotnet run --project ScreenToGif.Linux/ScreenToGif.Linux.csproj --no-build -- --editor
@@ -79,9 +66,7 @@ make run
 make editor
 ```
 
-Set `CONFIGURATION=Release` on any target when needed, for example
-`make publish CONFIGURATION=Release`. The published files are written to
-`artifacts/linux/<configuration>` at the repository root.
+Set `CONFIGURATION=Release` on any target when needed, for example `make publish CONFIGURATION=Release`. The published files are written to `artifacts/linux/<configuration>` at the repository root.
 
 ## Install a local desktop launcher
 
@@ -92,9 +77,7 @@ cd ScreenToGif.Linux
 make install-desktop CONFIGURATION=Release
 ```
 
-This copies the icon and launcher to `~/.local/share`, so no root access is
-needed. Launch **ScreenToGif** from the applications menu afterwards. To install
-an already-built executable instead, run:
+This copies the icon and launcher to `~/.local/share`, so no root access is needed. Launch **ScreenToGif** from the applications menu afterwards. To install an already-built executable instead, run:
 
 ```bash
 ./scripts/install-desktop-entry.sh /absolute/path/to/ScreenToGif.Linux
@@ -102,17 +85,10 @@ an already-built executable instead, run:
 
 ## Current scope
 
-The Editor imports still images, animated GIF/APNG files, and common video
-formats; supports frame selection, reordering, deletion, and timing changes;
-saves self-contained `.stg-linux` projects; and exports GIF, APNG, MP4, and
-WebM. Options provides the Linux application settings.
+The Recorder captures a rectangle of the screen at a chosen frame rate, or one frame at a time, and hands the result to the Editor. It needs an X11 session: under a native Wayland session Record is disabled and says why. Window snapping, user-interaction capture, cursor following, guidelines, and desktop-wide hotkeys are not available; [`docs/recorder.md`](docs/recorder.md) lists each unavailable control beside the subsystem it needs, and [`docs/recorder-followups.md`](docs/recorder-followups.md) describes what each would take.
 
-Recorder, Webcam, and Board are navigable interface scaffolds. A scaffold is a
-visual preview of an interface without its product functionality.
-These windows do not capture the desktop, discover or use cameras, accept Board
-drawing, record frames, create projects, or hand work to the Editor. Their
-unavailable controls remain disabled and explain the missing capability in
-tooltips.
+The Editor imports still images, animated GIF/APNG files, and common video formats; supports frame selection, reordering, deletion, and timing changes; saves self-contained `.stg-linux` projects; and exports GIF, APNG, MP4, and WebM. Options provides the Linux application settings.
 
-The Linux application does not support Windows `.stg` compatibility or the
-Windows editor's advanced annotation/effects commands.
+Webcam and Board are navigable interface scaffolds. A scaffold is a visual preview of an interface without its product functionality. These windows do not discover or use cameras, accept Board drawing, record frames, create projects, or hand work to the Editor. Their unavailable controls remain disabled and explain the missing capability in tooltips.
+
+The Linux application does not support Windows `.stg` compatibility or the Windows editor's advanced annotation/effects commands.

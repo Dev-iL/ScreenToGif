@@ -1,3 +1,4 @@
+using ScreenToGif.Linux.Services.Capture;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -64,6 +65,25 @@ public sealed class LinuxApplicationSettings
     public int ProjectRetentionDays { get; set; } = 5;
     public string FfmpegPath { get; set; } = "ffmpeg";
 
+    // Recorder. Defaults mirror the Windows recorder so a user moving between them is not surprised.
+    public RecorderCaptureMode RecorderCaptureMode { get; set; } = RecorderCaptureMode.PerSecond;
+    public int RecorderFramesPerSecond { get; set; } = 15;
+    public bool RecorderFixedFrameRate { get; set; }
+    public bool RecorderShowCursor { get; set; } = true;
+    public bool RecorderPreStart { get; set; }
+    public int RecorderPreStartSeconds { get; set; } = 3;
+    public int RecorderManualPlaybackDelayMs { get; set; } = 1000;
+    public bool RecorderAskBeforeDiscarding { get; set; } = true;
+    public bool RecorderRememberSize { get; set; } = true;
+    public bool RecorderRememberPosition { get; set; } = true;
+    public int RecorderWidth { get; set; } = 502;
+    public int RecorderHeight { get; set; } = 203;
+
+    /// <summary>Last recorder position in physical desktop pixels, or null when it has never been placed.</summary>
+    public int? RecorderLeft { get; set; }
+
+    public int? RecorderTop { get; set; }
+
     public LinuxApplicationSettings Copy() => new()
     {
         SingleInstance = SingleInstance,
@@ -87,7 +107,21 @@ public sealed class LinuxApplicationSettings
         DeleteCacheOnClose = DeleteCacheOnClose,
         RemoveOldProjects = RemoveOldProjects,
         ProjectRetentionDays = ProjectRetentionDays,
-        FfmpegPath = FfmpegPath
+        FfmpegPath = FfmpegPath,
+        RecorderCaptureMode = RecorderCaptureMode,
+        RecorderFramesPerSecond = RecorderFramesPerSecond,
+        RecorderFixedFrameRate = RecorderFixedFrameRate,
+        RecorderShowCursor = RecorderShowCursor,
+        RecorderPreStart = RecorderPreStart,
+        RecorderPreStartSeconds = RecorderPreStartSeconds,
+        RecorderManualPlaybackDelayMs = RecorderManualPlaybackDelayMs,
+        RecorderAskBeforeDiscarding = RecorderAskBeforeDiscarding,
+        RecorderRememberSize = RecorderRememberSize,
+        RecorderRememberPosition = RecorderRememberPosition,
+        RecorderWidth = RecorderWidth,
+        RecorderHeight = RecorderHeight,
+        RecorderLeft = RecorderLeft,
+        RecorderTop = RecorderTop
     };
 }
 

@@ -73,22 +73,28 @@ public partial class App : Application
         };
     }
 
+    /// <summary>
+    /// Shows or hides the notification icon to match the settings. The icon is created once and
+    /// only hidden afterwards: disposing Avalonia's D-Bus tray icon cancels a watch it never
+    /// observes, and the unhandled cancellation ends the process, taking every open window and any
+    /// recording in progress with it.
+    /// </summary>
     internal void RefreshTrayIcon()
     {
-        _trayIcon?.Dispose();
-        _trayIcon = null;
-        _trayIcons = null;
-
-        if (!LinuxSettings.Current.ShowNotificationIcon)
+        var show = LinuxSettings.Current.ShowNotificationIcon;
+        if (_trayIcon is not null)
         {
-            TrayIcon.SetIcons(this, null);
+            _trayIcon.IsVisible = show;
             return;
         }
+
+        if (!show)
+            return;
 
         var menu = new NativeMenu();
         menu.Add(CreateMenuItem("Startup window", (_, _) => OpenWindow(LinuxTrayWindow.Startup)));
         menu.Add(CreateMenuItem("Editor", (_, _) => OpenWindow(LinuxTrayWindow.Editor)));
-        menu.Add(CreateMenuItem("Options", (_, _) => ShowOptions()));
+        menu.Add(CreateMenuItem("Options", (_, _) => _ = ShowOptions()));
         menu.Add(new NativeMenuItemSeparator());
         menu.Add(CreateMenuItem("Exit", (_, _) => ExitApplication()));
 
@@ -104,20 +110,37 @@ public partial class App : Application
         TrayIcon.SetIcons(this, _trayIcons);
     }
 
-    internal void ShowOptions(Window? owner = null)
+    /// <summary>
+    /// Opens Options, on <paramref name="section"/>. The returned task completes when a dialog the
+    /// caller owns closes, so a caller whose own fields mirror those settings can follow the edit;
+    /// it completes at once when Options is shown without an owner or was already open.
+    /// </summary>
+    internal Task ShowOptions(Window? owner = null, OptionsSection section = OptionsSection.Application)
     {
         var existing = Desktop?.Windows.OfType<OptionsWindow>().FirstOrDefault();
         if (existing is not null)
         {
+            existing.ShowSection(section);
             Restore(existing);
-            return;
+            return Task.CompletedTask;
         }
 
-        var options = new OptionsWindow();
+        var options = new OptionsWindow(section);
         if (owner is not null)
-            _ = options.ShowDialog(owner);
-        else
-            options.Show();
+            return options.ShowDialog(owner);
+
+        options.Show();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Makes a window the application's main window, for a window that opened from a capture shell
+    /// rather than from Startup.
+    /// </summary>
+    internal void AdoptEditor(Window editor)
+    {
+        if (Desktop is not null)
+            Desktop.MainWindow = editor;
     }
 
     internal void HandleWindowClosed()
@@ -155,6 +178,7 @@ public partial class App : Application
                     OpenWindow(fallbackWindow == LinuxTrayWindow.None ? LinuxTrayWindow.Startup : fallbackWindow);
                     return;
                 }
+
                 var minimize = windows.Any(window => window.WindowState != WindowState.Minimized && window.IsVisible);
                 foreach (var window in windows)
                     window.WindowState = minimize ? WindowState.Minimized : WindowState.Normal;

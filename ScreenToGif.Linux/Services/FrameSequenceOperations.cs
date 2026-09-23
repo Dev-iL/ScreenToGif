@@ -60,6 +60,7 @@ public static class FrameSequenceOperations
                     selected.Add(index + 1);
                 }
         }
+
         return result;
     }
 
@@ -84,6 +85,7 @@ public static class FrameSequenceOperations
                     selected.Add(index + 1);
                 }
         }
+
         return selected.Order().ToArray();
     }
 

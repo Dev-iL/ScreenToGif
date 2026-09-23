@@ -97,6 +97,7 @@ public partial class MainWindow
             firstIndex = indices[0];
             return true;
         }
+
         if (indices.Length == 2 && indices[1] == indices[0] + 1)
         {
             firstIndex = indices[0];

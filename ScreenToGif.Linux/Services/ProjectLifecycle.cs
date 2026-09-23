@@ -22,6 +22,7 @@ public static class ProjectWorkspaceLifecycle
             replacement.Workspace.Dispose();
             throw;
         }
+
         currentWorkspace.Dispose();
     }
 }

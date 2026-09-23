@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -33,12 +33,14 @@ public partial class MainWindow
             SetStatus("Wait for the active operation to finish, or use Stop to cancel it.");
             return;
         }
+
         if (_playback.IsPlaying)
         {
             StopPreview();
             SetStatus("Preview stopped.");
             return;
         }
+
         if (_frames.Count == 0)
         {
             SetStatus("There are no frames to preview.");
@@ -61,6 +63,7 @@ public partial class MainWindow
             SetStatus("Canceling the active operation...");
             return;
         }
+
         StopPreview();
         SetStatus("Preview stopped.");
     }
@@ -78,6 +81,7 @@ public partial class MainWindow
             SetStatus("There are no frames to navigate through.");
             return;
         }
+
         FrameListBox.SelectedItems?.Clear();
         FrameListBox.SelectedIndex = index;
         FrameListBox.ScrollIntoView(_frames[index]);
@@ -107,6 +111,7 @@ public partial class MainWindow
                 SetPreview(completedFrame);
                 FrameListBox.ScrollIntoView(completedFrame);
             }
+
             UpdateFrameInfo();
             SetStatus("Preview completed.");
             return;
@@ -161,5 +166,4 @@ public partial class MainWindow
         ToolTip.SetTip(LoopPlaybackCheckBox, optionsTip);
         ToolTip.SetTip(DropFramesCheckBox, optionsTip);
     }
-
 }

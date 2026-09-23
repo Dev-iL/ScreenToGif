@@ -40,7 +40,8 @@ public sealed class FfmpegExporter
 
         try
         {
-            await File.WriteAllTextAsync(listPath, BuildConcatList(prepared.Frames), cancellationToken);
+            var isVideo = extension is ".mp4" or ".webm";
+            await File.WriteAllTextAsync(listPath, BuildConcatList(prepared.Frames, isVideo), cancellationToken);
 
             var arguments = new List<string>
             {
@@ -52,7 +53,7 @@ public sealed class FfmpegExporter
                 "-an"
             };
 
-            AddCodecArguments(arguments, stagedOutputPath);
+            AddCodecArguments(arguments, stagedOutputPath, prepared.Frames[^1].DelayMs);
             arguments.Add(stagedOutputPath);
 
             await _ffmpeg.RunFfmpegCheckedAsync(arguments, cancellationToken);
@@ -101,6 +102,7 @@ public sealed class FfmpegExporter
             canvasWidth += canvasWidth % 2;
             canvasHeight += canvasHeight % 2;
         }
+
         var first = media[0];
         var needsNormalization = media.Any(info =>
             info.Width != canvasWidth || info.Height != canvasHeight ||
@@ -173,32 +175,47 @@ public sealed class FfmpegExporter
         }
     }
 
-    private static string BuildConcatList(IEnumerable<EditorFrame> frames)
+    /// <summary>
+    /// Lists the frames for FFmpeg's concat demuxer. The demuxer ignores the last entry's duration,
+    /// and a repeated final entry is encoded as a frame of its own. An animated image must hold
+    /// exactly the project's frames, so it gets one entry per frame and its last delay is set
+    /// through the muxer instead. A video has no per-frame delay to set, so it keeps the repeated
+    /// entry: the extra frame is a copy of the last one and is what makes the last frame last.
+    /// </summary>
+    private static string BuildConcatList(IReadOnlyList<EditorFrame> frames, bool repeatLastFrame)
     {
         var builder = new StringBuilder();
-        var frameList = frames.ToArray();
 
-        foreach (var frame in frameList)
+        foreach (var frame in frames)
         {
             builder.Append("file ").AppendLine(QuoteConcatPath(frame.FilePath));
             builder.Append("duration ").AppendLine((Math.Max(1, frame.DelayMs) / 1000d).ToString("0.######", CultureInfo.InvariantCulture));
         }
 
-        // The concat demuxer uses the final file as the final duration marker.
-        builder.Append("file ").AppendLine(QuoteConcatPath(frameList[^1].FilePath));
+        if (repeatLastFrame)
+            builder.Append("file ").AppendLine(QuoteConcatPath(frames[^1].FilePath));
+
         return builder.ToString();
     }
 
     private static string QuoteConcatPath(string path) =>
         $"'{Path.GetFullPath(path).Replace("'", "'\\''", StringComparison.Ordinal)}'";
 
-    private static void AddCodecArguments(ICollection<string> arguments, string outputPath)
+    private const int MaximumGifFinalDelayCentiseconds = 65535;
+    private const double MaximumApngFinalDelaySeconds = 65535;
+
+    private static void AddCodecArguments(ICollection<string> arguments, string outputPath, int lastDelayMs)
     {
         switch (Path.GetExtension(outputPath).ToLowerInvariant())
         {
             case ".gif":
                 arguments.Add("-loop");
                 arguments.Add("0");
+                // The muxers refuse a final delay outside their range rather than clamping it, as
+                // they do for every other frame, so it is clamped here to the same limits.
+                arguments.Add("-final_delay");
+                arguments.Add(Math.Clamp((int)Math.Round(lastDelayMs / 10d), 1, MaximumGifFinalDelayCentiseconds)
+                    .ToString(CultureInfo.InvariantCulture));
                 break;
             case ".mp4":
                 arguments.Add("-c:v");
@@ -217,6 +234,9 @@ public sealed class FfmpegExporter
             case ".apng":
                 arguments.Add("-plays");
                 arguments.Add("0");
+                arguments.Add("-final_delay");
+                arguments.Add(Math.Min(Math.Max(1, lastDelayMs) / 1000d, MaximumApngFinalDelaySeconds)
+                    .ToString("0.######", CultureInfo.InvariantCulture));
                 break;
             default:
                 throw new NotSupportedException("The Linux editor currently exports GIF, APNG, MP4, and WebM.");

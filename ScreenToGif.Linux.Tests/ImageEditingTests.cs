@@ -218,6 +218,7 @@ public sealed class ImageEditingTests : IDisposable
                 await File.WriteAllTextAsync(output, "staged", CancellationToken.None);
                 cancellation.Cancel();
             }
+
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
         }
     }

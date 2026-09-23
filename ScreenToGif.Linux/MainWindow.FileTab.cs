@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -217,6 +217,7 @@ public partial class MainWindow
                 SetStatus("No saved Linux projects are available in Recents.");
                 return;
             }
+
             var labels = paths.Select(path => $"{Path.GetFileName(path)} — {path}").ToArray();
             var choice = await new Controls.ChoiceDialog("Open recent project", labels).ShowForAsync(this);
             if (choice is not null)
@@ -235,6 +236,7 @@ public partial class MainWindow
             SetStatus("The project is already empty.");
             return;
         }
+
         if (_mutations.HasUnsavedChanges)
         {
             var confirmed = await new Controls.ConfirmDialog(
@@ -256,6 +258,22 @@ public partial class MainWindow
             MarkClean();
             SetStatus("Discarded the project and opened an empty workspace.");
         });
+    }
+
+    /// <summary>
+    /// Opens a recording this editor did not create, taking ownership of its workspace and frames.
+    /// The recorder has already closed by the time this runs, so there is nothing to confirm.
+    /// </summary>
+    internal async Task OpenRecordingAsync(LoadedProject recording, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(recording);
+
+        var frameCount = recording.Frames.Count;
+        await ReplaceActiveProjectAsync(recording, cancellationToken);
+        MarkClean();
+        SetStatus(frameCount == 1
+            ? "Opened 1 recorded frame."
+            : $"Opened {frameCount} recorded frames.");
     }
 
     private async Task OpenProjectPathAsync(string path)
@@ -299,12 +317,14 @@ public partial class MainWindow
             e.Cancel = true;
             return;
         }
+
         if (_operations.RequestClose())
         {
             e.Cancel = true;
             SetStatus("Canceling the active operation before closing...");
             return;
         }
+
         if (!_mutations.HasUnsavedChanges || !LinuxSettings.Current.AskBeforeCloseEditor)
             return;
 
@@ -320,6 +340,7 @@ public partial class MainWindow
             SetStatus("Close canceled; the current work is unchanged.");
             return;
         }
+
         _allowClose = true;
         Close();
     }
@@ -337,6 +358,7 @@ public partial class MainWindow
             loaded.Dispose();
             throw;
         }
+
         ProjectWorkspaceLifecycle.Replace(_workspace, loaded, replacement =>
         {
             ReplaceFrames(replacement.Frames);
@@ -385,5 +407,4 @@ public partial class MainWindow
             SetError(ex);
         }
     }
-
 }

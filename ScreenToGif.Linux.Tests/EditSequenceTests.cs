@@ -252,6 +252,7 @@ public sealed class EditSequenceTests : IDisposable
             arguments.Add("-pix_fmt");
             arguments.Add(pixelFormat);
         }
+
         arguments.Add(path);
         await _ffmpeg.RunFfmpegCheckedAsync(arguments);
         return path;

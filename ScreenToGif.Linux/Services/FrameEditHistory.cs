@@ -108,6 +108,7 @@ public sealed class FrameEditHistory
             Add(edit.Before);
             Add(edit.After);
         }
+
         return paths;
 
         void Add(EditorSnapshot? snapshot)

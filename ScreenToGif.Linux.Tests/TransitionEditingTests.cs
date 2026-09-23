@@ -231,6 +231,7 @@ public sealed class TransitionEditingTests : IDisposable
                 File.WriteAllText(output, "staged");
                 return Task.CompletedTask;
             }
+
             throw new InvalidOperationException("simulated transition failure");
         }
     }

@@ -32,6 +32,7 @@ public sealed class SingleInstanceGuard : IDisposable
         {
             // An unowned mutex is used when multiple instances are allowed.
         }
+
         _mutex.Dispose();
     }
 }

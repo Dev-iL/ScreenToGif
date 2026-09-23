@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | Startup | `ScreenToGif/Windows/Other/Startup.xaml` | `ScreenToGif.Linux/StartupWindow.axaml` |
 | Editor shell and ribbon | `ScreenToGif/Windows/Editor.xaml` | `ScreenToGif.Linux/MainWindow.axaml` |
+| Recorder frame and command bar | `ScreenToGif/Windows/Recorder.xaml` and `Recorder.xaml.cs` | `ScreenToGif.Linux/RecorderWindow.axaml` with `Themes/CaptureShell.axaml` |
 | Repeated button layout | `ScreenToGif/Controls/ExtendedButton.cs` and `ScreenToGif/Themes/Button.xaml` | A ScreenToGif-specific Avalonia button and `ControlTheme` |
 | Window chrome | `ScreenToGif/Controls/ExWindow.cs` | Native Avalonia chrome unless a requested visual mismatch requires a bounded replacement |
 
@@ -19,6 +20,8 @@ The Windows project’s `Themes/` files provide template and state values; scree
 4. Extract only repeated visual behavior into a compatibility control/theme.
 5. Bind each enabled Linux command to its existing behavior; disabled placeholders must not invent behavior.
 
+Port the Windows code-behind's visibility rules along with the XAML. A control Windows collapses in some state is hidden there, not disabled: the Recorder collapses its frame-rate field, indicator, and unit in Manual mode and relabels the unit per mode (`DetectCaptureFrequency` in `Recorder.xaml.cs`). The disabled-with-tooltip placeholder is for a capability Linux lacks, not for a control Windows itself hides.
+
 ## Compatibility-control test
 
 Create or extend a custom Avalonia control only when all three are true:
@@ -28,6 +31,14 @@ Create or extend a custom Avalonia control only when all three are true:
 - keeping it local to each call site risks visible drift.
 
 For ScreenToGif buttons, prefer a `Button` derivative or a templated content control with styled properties for the icon, label, icon bounds, and optional key gesture. Its `ControlTheme` should carry the vertical/horizontal template, disabled opacity, focus, hover, and pressed states. Do not custom-draw an interactive button.
+
+## Fluent defaults that override copied geometry
+
+Copying a WPF height is not enough where a Fluent template carries a larger minimum. `NumericUpDown` and the `ButtonSpinner` inside its template both have minimum heights that outrank an explicit `Height`, so a 24-unit field in a compact bar renders taller than a 24-unit `ComboBox` beside it and reaches the bar's edges. Set `MinHeight="0"` on the `NumericUpDown` and, through `/template/ ButtonSpinner`, on the spinner as well; setting it on the inner `TextBox` alone changes nothing.
+
+Fluent draws a filled background on a disabled `Button` through its template's `PART_ContentPresenter`, which overrides a transparent `Background` set on the button. On a dark tool bar that fill reads as a pressed or checked tool. Clear it with a `:disabled /template/ ContentPresenter#PART_ContentPresenter` style that sets `Background` and `BorderBrush` to transparent, and keep disabled state to opacity.
+
+Both were found by sampling pixels in a real render, not by reading markup; see [verification](verification.md).
 
 ## Known baseline: startup
 

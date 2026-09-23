@@ -16,10 +16,11 @@
                 <ControlTemplate>
                     <Grid RowDefinitions="24,Auto" HorizontalAlignment="Stretch">
                         <ToggleButton Grid.Row="0"
+                                      Classes="settings-header"
+                                      HorizontalAlignment="Stretch"
                                       IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                       Background="Transparent"
-                                      BorderBrush="#4B4F55"
-                                      BorderThickness="0,0,0,1"
+                                      BorderThickness="0"
                                       MinHeight="0"
                                       Height="24"
                                       Padding="0"
@@ -28,7 +29,7 @@
                             <Grid ColumnDefinitions="Auto,*,24">
                                 <ContentPresenter Content="{TemplateBinding Header}" VerticalAlignment="Center" />
                                 <Border Grid.Column="1" Height="1" Background="#4B4F55" Margin="8,0,0,0" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2" Text="⌃" Foreground="#B9BEC5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="chevron" Text="⌃" Foreground="#B9BEC5" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Grid>
                         </ToggleButton>
                         <ContentPresenter Grid.Row="1"
@@ -44,6 +45,15 @@
         <Style Selector="TextBlock"><Setter Property="Foreground" Value="#E1E4E8" /></Style>
         <Style Selector="Button:disabled"><Setter Property="ToolTip.ShowOnDisabled" Value="True" /></Style>
         <Style Selector="CheckBox:disabled"><Setter Property="ToolTip.ShowOnDisabled" Value="True" /></Style>
+        <!-- A group header is a section label: Fluent's checked and hover fills would make it read as a pressed button. -->
+        <Style Selector="ToggleButton.settings-header:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.settings-header:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.settings-header:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#E1E4E8" />
+        </Style>
+        <Style Selector="ToggleButton.settings-header:not(:checked) TextBlock.chevron"><Setter Property="RenderTransform" Value="rotate(180deg)" /></Style>
+        <!-- A row that only applies under another setting dims as a whole and says which, when that setting is off. -->
+        <Style Selector="Grid.dependent-row"><Setter Property="ToolTip.ShowOnDisabled" Value="True" /></Style>
+        <Style Selector="Grid.dependent-row:disabled"><Setter Property="Opacity" Value="0.55" /></Style>
         <Style Selector="CheckBox"><Setter Property="MinHeight" Value="0" /><Setter Property="Height" Value="28" /><Setter Property="Padding" Value="0" /></Style>
         <Style Selector="ListBox.navigation"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
         <Style Selector="ListBox.navigation ListBoxItem">
@@ -221,36 +231,74 @@
             </ScrollViewer>
 
             <ScrollViewer x:Name="RecorderPage" Grid.Column="1" IsVisible="False" VerticalScrollBarVisibility="Auto">
-                <StackPanel Opacity="0.68" IsEnabled="False" ToolTip.Tip="Screen recording has not been ported to Linux yet.">
+                <StackPanel>
                     <Expander Classes="settings-group" Header="Interface">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="8">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="8"
+                                        IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                        ToolTip.Tip="The Linux recorder has one interface. The Old and New choice belongs to the Windows recorder's two WPF window implementations.">
                                 <Border Classes="option-card"><RadioButton IsChecked="True"><StackPanel Orientation="Horizontal" Spacing="8"><icons:WindowsIcon Kind="File" Width="42" Height="42" /><TextBlock Text="Old" VerticalAlignment="Center" /></StackPanel></RadioButton></Border>
                                 <Border Classes="option-card"><RadioButton><StackPanel Orientation="Horizontal" Spacing="8"><icons:WindowsIcon Kind="NewFile" Width="42" Height="42" /><TextBlock Text="New" VerticalAlignment="Center" /></StackPanel></RadioButton></Border>
                             </StackPanel>
-                            <CheckBox Classes="setting" Content="Hide the title bar (thin mode)." />
-                            <CheckBox Classes="setting" Content="Display the discard button also while recording." />
+                            <CheckBox Classes="setting" Content="Hide the title bar (thin mode)." IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                      ToolTip.Tip="Thin mode needs a custom window frame with its own drag and resize handling, which the Linux recorder does not have." />
+                            <CheckBox Classes="setting" Content="Display the discard button also while recording." IsChecked="True" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                      ToolTip.Tip="The Linux recorder always shows Discard while recording or paused, so there is nothing to turn off." />
                         </StackPanel>
                     </Expander>
                     <Expander Classes="settings-group" Header="Capture frequency">
                         <StackPanel>
                             <WrapPanel HorizontalAlignment="Center" Margin="5">
-                                <RadioButton Content="Manual" Margin="8" /><RadioButton Content="User interaction" Margin="8" /><RadioButton Content="Per second" Margin="8" IsChecked="True" /><RadioButton Content="Per minute" Margin="8" /><RadioButton Content="Per hour" Margin="8" />
+                                <RadioButton x:Name="RecorderManualRadio" GroupName="RecorderFrequency" Content="Manual" Margin="8" IsCheckedChanged="RecorderFrequencyChanged" />
+                                <RadioButton Content="User interaction" Margin="8" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                             ToolTip.Tip="Capturing on each click or keystroke needs global input hooks, which the Linux build does not have." />
+                                <RadioButton x:Name="RecorderPerSecondRadio" GroupName="RecorderFrequency" Content="Per second" Margin="8" IsCheckedChanged="RecorderFrequencyChanged" />
+                                <RadioButton x:Name="RecorderPerMinuteRadio" GroupName="RecorderFrequency" Content="Per minute" Margin="8" IsCheckedChanged="RecorderFrequencyChanged" />
+                                <RadioButton x:Name="RecorderPerHourRadio" GroupName="RecorderFrequency" Content="Per hour" Margin="8" IsCheckedChanged="RecorderFrequencyChanged" />
                             </WrapPanel>
-                            <CheckBox Classes="setting" Content="Fixed frame rate.  (Constant delay that does not change with recording lag)" />
+                            <CheckBox x:Name="RecorderFixedFrameRateCheckBox" Classes="setting" Content="Fixed frame rate.  (Constant delay that does not change with recording lag)"
+                                      ToolTip.Tip="Applies only to Per second capture." />
+                            <Grid x:Name="RecorderManualDelayRow" Classes="dependent-row" Margin="30,3,5,3" ColumnDefinitions="Auto,120,*"
+                                  ToolTip.Tip="Used only when the capture frequency is Manual.">
+                                <TextBlock Text="Manual playback delay:" VerticalAlignment="Center" />
+                                <NumericUpDown x:Name="RecorderManualDelayUpDown" Grid.Column="1" Margin="8,0" MinWidth="0" Minimum="1" Maximum="10000" Increment="50" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="muted" Text="Delay stamped on each frame captured with Snap, in milliseconds." VerticalAlignment="Center" Margin="8,0" TextWrapping="Wrap" />
+                            </Grid>
                         </StackPanel>
                     </Expander>
                     <Expander Classes="settings-group" Header="Capture mode">
                         <StackPanel>
-                            <WrapPanel HorizontalAlignment="Center" Margin="5"><RadioButton Content="BitBlt" Margin="10" IsChecked="True" /><RadioButton Content="DirectX" Margin="10" /><RadioButton Content="Save to file" Margin="10" /><RadioButton Content="Memory cache" Margin="10" /></WrapPanel>
-                            <CheckBox Classes="setting" Content="Show the mouse cursor in the recording." IsChecked="True" />
-                            <CheckBox Classes="setting" Content="Force memory cleanup during capture.  (Reduces memory usage, but decreases performance)" IsChecked="True" />
-                            <CheckBox Classes="setting" Content="Improve capture performance on a remote desktop connection." IsChecked="True" />
+                            <WrapPanel HorizontalAlignment="Center" Margin="5" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                       ToolTip.Tip="BitBlt and DirectX are Windows GDI and DXGI capture back ends. The Linux recorder grabs the screen through X11, and the save-to-file and memory-cache choices belong to the Windows frame cache it does not use.">
+                                <RadioButton Content="BitBlt" Margin="10" IsChecked="True" /><RadioButton Content="DirectX" Margin="10" /><RadioButton Content="Save to file" Margin="10" /><RadioButton Content="Memory cache" Margin="10" />
+                            </WrapPanel>
+                            <CheckBox x:Name="RecorderShowCursorCheckBox" Classes="setting" Content="Show the mouse cursor in the recording." />
+                            <CheckBox Classes="setting" Content="Force memory cleanup during capture.  (Less memory, slower capture)" IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                      ToolTip.Tip="This drives the Windows frame cache's garbage collection. The Linux recorder writes each frame to disk as it is captured and keeps no such cache." />
+                            <CheckBox Classes="setting" Content="Improve capture performance on a remote desktop connection." IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                      ToolTip.Tip="This switches the Windows capture back end for Remote Desktop sessions, which has no counterpart in the X11 capture path." />
                         </StackPanel>
                     </Expander>
-                    <Expander Classes="settings-group" Header="Guidelines"><TextBlock Classes="muted" Margin="15,5" Text="Recorder guidelines are unavailable until the capture surface is ported." /></Expander>
+                    <Expander Classes="settings-group" Header="Guidelines">
+                        <TextBlock Classes="muted" Margin="15,5" TextWrapping="Wrap"
+                                   Text="Rule-of-thirds and crosshair guidelines need an overlay drawn inside the recorder frame, which the Linux recorder does not have." />
+                    </Expander>
                     <Expander Classes="settings-group" Header="Other">
-                        <StackPanel><CheckBox Classes="setting" Content="Remember the previous size of the recording area." IsChecked="True" /><CheckBox Content="Remember the previous location of the recording area." Margin="30,3,5,3" IsChecked="True" /><CheckBox Classes="setting" Content="Use a pre start countdown." /><CheckBox Classes="setting" Content="Enable cursor following." /><CheckBox Classes="setting" Content="Ask me before discarding the recording." IsChecked="True" /></StackPanel>
+                        <StackPanel>
+                            <CheckBox x:Name="RecorderRememberSizeCheckBox" Classes="setting" Content="Remember the previous size of the recording area." IsCheckedChanged="RecorderDependencyChanged" />
+                            <CheckBox x:Name="RecorderRememberPositionCheckBox" Content="Remember the previous location of the recording area." Margin="30,3,5,3"
+                                      ToolTip.Tip="Turn on remembering the size to remember the location too." />
+                            <CheckBox x:Name="RecorderPreStartCheckBox" Classes="setting" Content="Use a pre start countdown." IsCheckedChanged="RecorderDependencyChanged" />
+                            <Grid x:Name="RecorderPreStartSecondsRow" Classes="dependent-row" Margin="30,3,5,3" ColumnDefinitions="Auto,120,*"
+                                  ToolTip.Tip="Turn on the pre start countdown to set its length.">
+                                <TextBlock Text="Countdown:" VerticalAlignment="Center" />
+                                <NumericUpDown x:Name="RecorderPreStartSecondsUpDown" Grid.Column="1" Margin="8,0" MinWidth="0" Minimum="1" Maximum="30" Increment="1" FormatString="0" ShowButtonSpinner="False" HorizontalContentAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="muted" Text="Seconds to wait before the first frame is captured." VerticalAlignment="Center" Margin="8,0" TextWrapping="Wrap" />
+                            </Grid>
+                            <CheckBox Classes="setting" Content="Enable cursor following." IsEnabled="False" ToolTip.ShowOnDisabled="True"
+                                      ToolTip.Tip="Following the cursor needs global pointer tracking through input hooks, which the Linux build does not have." />
+                            <CheckBox x:Name="RecorderAskBeforeDiscardingCheckBox" Classes="setting" Content="Ask me before discarding the recording." />
+                        </StackPanel>
                     </Expander>
                 </StackPanel>
             </ScrollViewer>
@@ -293,8 +341,8 @@
 
             <ScrollViewer x:Name="ShortcutsPage" Grid.Column="1" IsVisible="False" VerticalScrollBarVisibility="Auto">
                 <StackPanel Opacity="0.68" IsEnabled="False" ToolTip.Tip="Global shortcuts require a desktop-wide hotkey service that has not been ported yet.">
-                    <Expander Classes="settings-group" Header="Global"><Grid Margin="15,4" ColumnDefinitions="105,75,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"><TextBlock Classes="label" Text="Screen recorder:" /><TextBox Grid.Column="1" /><TextBlock Grid.Column="2" Classes="muted" Text="Opens the default screen recorder" Margin="8,0" /><TextBlock Grid.Row="1" Classes="label" Text="Webcam recorder:" /><TextBox Grid.Row="1" Grid.Column="1" /><TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="Opens the webcam recorder" Margin="8,0" /><TextBlock Grid.Row="2" Classes="label" Text="Board recorder:" /><TextBox Grid.Row="2" Grid.Column="1" /><TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="Opens the board recorder" Margin="8,0" /><TextBlock Grid.Row="3" Classes="label" Text="Editor:" /><TextBox Grid.Row="3" Grid.Column="1" /><TextBlock Grid.Row="3" Grid.Column="2" Classes="muted" Text="Opens another editor window" Margin="8,0" /><TextBlock Grid.Row="4" Classes="label" Text="Options:" /><TextBox Grid.Row="4" Grid.Column="1" /><TextBlock Grid.Row="4" Grid.Column="2" Classes="muted" Text="Opens the options window" Margin="8,0" /><TextBlock Grid.Row="5" Classes="label" Text="Exit:" /><TextBox Grid.Row="5" Grid.Column="1" /><TextBlock Grid.Row="5" Grid.Column="2" Classes="muted" Text="Closes all windows and exits" Margin="8,0" /></Grid></Expander>
-                    <Expander Classes="settings-group" Header="Recorders"><Grid Margin="15,4" ColumnDefinitions="105,75,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"><TextBlock Classes="label" Text="Start/Pause:" /><TextBox Grid.Column="1" Text="F7" /><TextBlock Grid.Column="2" Classes="muted" Text="Starts or pauses recording" Margin="8,0" /><TextBlock Grid.Row="1" Classes="label" Text="Stop:" /><TextBox Grid.Row="1" Grid.Column="1" Text="F8" /><TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="Stops recording and opens the editor" Margin="8,0" /><TextBlock Grid.Row="2" Classes="label" Text="Discard:" /><TextBox Grid.Row="2" Grid.Column="1" Text="F9" /><TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="Discards the active recording" Margin="8,0" /><TextBlock Grid.Row="3" Classes="label" Text="Cursor following:" /><TextBox Grid.Row="3" Grid.Column="1" /><TextBlock Grid.Row="3" Grid.Column="2" Classes="muted" Text="Toggles cursor following" Margin="8,0" /><TextBlock Grid.Row="4" Classes="label" Text="Disable following:" /><TextBox Grid.Row="4" Grid.Column="1" /><TextBlock Grid.Row="4" Grid.Column="2" Classes="muted" Text="Temporarily disables cursor following" Margin="8,0" /></Grid></Expander>
+                    <Expander Classes="settings-group" Header="Global"><Grid Margin="15,4" ColumnDefinitions="105,75,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="Desktop-wide hotkeys need a global key grab through an input hook or a desktop shortcut service, which the Linux build does not have."><TextBlock Classes="label" Text="Screen recorder:" /><TextBox Grid.Column="1" /><TextBlock Grid.Column="2" Classes="muted" Text="Opens the default screen recorder" Margin="8,0" /><TextBlock Grid.Row="1" Classes="label" Text="Webcam recorder:" /><TextBox Grid.Row="1" Grid.Column="1" /><TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="Opens the webcam recorder" Margin="8,0" /><TextBlock Grid.Row="2" Classes="label" Text="Board recorder:" /><TextBox Grid.Row="2" Grid.Column="1" /><TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="Opens the board recorder" Margin="8,0" /><TextBlock Grid.Row="3" Classes="label" Text="Editor:" /><TextBox Grid.Row="3" Grid.Column="1" /><TextBlock Grid.Row="3" Grid.Column="2" Classes="muted" Text="Opens another editor window" Margin="8,0" /><TextBlock Grid.Row="4" Classes="label" Text="Options:" /><TextBox Grid.Row="4" Grid.Column="1" /><TextBlock Grid.Row="4" Grid.Column="2" Classes="muted" Text="Opens the options window" Margin="8,0" /><TextBlock Grid.Row="5" Classes="label" Text="Exit:" /><TextBox Grid.Row="5" Grid.Column="1" /><TextBlock Grid.Row="5" Grid.Column="2" Classes="muted" Text="Closes all windows and exits" Margin="8,0" /></Grid></Expander>
+                    <Expander Classes="settings-group" Header="Recorders"><Grid Margin="15,4" ColumnDefinitions="105,75,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"><TextBlock Classes="label" Text="Start/Pause:" /><TextBox Grid.Column="1" Text="F7" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="The recorder's shortcuts are fixed at F7, F8 and F9 and act only while the recorder window has focus. Rebinding them needs a shortcut editor the Linux build does not have." /><TextBlock Grid.Column="2" Classes="muted" Text="Starts or pauses recording, while focused" Margin="8,0" /><TextBlock Grid.Row="1" Classes="label" Text="Stop:" /><TextBox Grid.Row="1" Grid.Column="1" Text="F8" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="The recorder's shortcuts are fixed at F7, F8 and F9 and act only while the recorder window has focus. Rebinding them needs a shortcut editor the Linux build does not have." /><TextBlock Grid.Row="1" Grid.Column="2" Classes="muted" Text="Stops and opens the editor, while focused" Margin="8,0" /><TextBlock Grid.Row="2" Classes="label" Text="Discard:" /><TextBox Grid.Row="2" Grid.Column="1" Text="F9" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="The recorder's shortcuts are fixed at F7, F8 and F9 and act only while the recorder window has focus. Rebinding them needs a shortcut editor the Linux build does not have." /><TextBlock Grid.Row="2" Grid.Column="2" Classes="muted" Text="Discards the recording, while focused" Margin="8,0" /><TextBlock Grid.Row="3" Classes="label" Text="Cursor following:" /><TextBox Grid.Row="3" Grid.Column="1" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="Cursor following is unavailable on Linux, because following the cursor needs global pointer tracking through input hooks." /><TextBlock Grid.Row="3" Grid.Column="2" Classes="muted" Text="Toggles cursor following" Margin="8,0" /><TextBlock Grid.Row="4" Classes="label" Text="Disable following:" /><TextBox Grid.Row="4" Grid.Column="1" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="Cursor following is unavailable on Linux, because following the cursor needs global pointer tracking through input hooks." /><TextBlock Grid.Row="4" Grid.Column="2" Classes="muted" Text="Temporarily disables cursor following" Margin="8,0" /></Grid></Expander>
                 </StackPanel>
             </ScrollViewer>
 

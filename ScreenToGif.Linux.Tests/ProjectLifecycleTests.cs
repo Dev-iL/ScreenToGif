@@ -335,6 +335,7 @@ public sealed class ProjectLifecycleTests : IDisposable
                 ? Directory.EnumerateFiles(workspaceRoot, marker, SearchOption.AllDirectories)
                 : []);
         }
+
         Assert.False(File.Exists(Path.Combine(Path.GetTempPath(), "screentogif-linux", "escaped.txt")));
     }
 
@@ -423,6 +424,7 @@ public sealed class ProjectLifecycleTests : IDisposable
             await stream.WriteAsync(PngHeader(1, 1));
             stream.SetLength(250_000_000);
         }
+
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
@@ -510,5 +512,4 @@ public sealed class ProjectLifecycleTests : IDisposable
         System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(20, 4), height);
         return header;
     }
-
 }

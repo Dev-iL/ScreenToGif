@@ -70,6 +70,7 @@ public sealed class FrameClipboard : IDisposable
                 await source.CopyToAsync(destination, cancellationToken);
                 pasted.Add(new FrameState(output, _frames[index].DelayMs));
             }
+
             return pasted;
         }
         catch
@@ -115,6 +116,7 @@ public static class TimelineSelection
             zeroBasedIndex = number - 1;
             return true;
         }
+
         zeroBasedIndex = -1;
         return false;
     }

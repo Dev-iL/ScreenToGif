@@ -22,6 +22,16 @@ When driving the window with `xdotool` under Xvfb without a window manager, the 
 
 If Xvfb fails to expose a display, treat that as a runner limitation, not application evidence. Verify build and source geometry locally, then leave rendered comparison as an explicit acceptance gate for an environment with a working X/Wayland display.
 
+## Measuring a render
+
+Judge heights, alignment, and rule counts by sampling pixels, not by eye. Scan a fixed pixel column through the capture for a known border or rule colour: the rows where it appears give each control's top and bottom and the number of rules under a header, and two controls meant to share a height either share those rows or do not. Crop small regions and scale them up two to four times before viewing, since a one-pixel difference is invisible at 1x.
+
+`xdotool getwindowgeometry` and `import -window` include the compositor's shadow margin on the real session, so a window's client area sits inset inside the capture. Locate the command bar or header by content rather than by a fixed offset from the capture's edge.
+
+## Real session
+
+Some checks need the user's real session: under a bare Xvfb there is no compositor, so transparency renders opaque black, and focus and stacking behave differently. Before driving it, confirm the session is unlocked, kill only processes you started, and guard every click and key press against landing in another application's window. The functionality skill's recorder reference has the specifics.
+
 ## Comparison boundaries
 
 Windows’ custom `ExWindow` title bar depends on Windows APIs and cannot be copied directly. Compare the client area first; document any native-window-frame difference separately. Do not use that difference to excuse client-area layout drift.

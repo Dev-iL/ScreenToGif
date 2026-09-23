@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Threading;
 
 namespace ScreenToGif.Linux.Controls;
 
@@ -104,8 +106,27 @@ public sealed class ConfirmDialog : Window
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = Avalonia.Media.Brush.Parse("#25272A");
-        var cancel = new Button { Content = "Cancel", MinWidth = 84 };
+        // Escape and the initial focus both land on Cancel, so a stray Enter or Space cannot confirm
+        // a destructive action; confirming takes a deliberate move to the other button.
+        var cancel = new Button { Content = "Cancel", MinWidth = 84, IsCancel = true };
         cancel.Click += (_, _) => Close(false);
+        Opened += (_, _) => cancel.Focus(NavigationMethod.Tab);
+        // Keyboard focus does not return to the owner by itself when a dialog closes: dismissed from
+        // the keyboard, the window manager leaves X input focus on the owner's frame rather than
+        // the owner, and a window driven by shortcut keys, such as the Recorder, stops hearing them
+        // until clicked. Activating the owner once the dialog is gone asks the window manager to
+        // hand input focus back.
+        Closed += (_, _) =>
+        {
+            if (Owner is not Window owner)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                owner.Activate();
+                owner.Focus();
+            });
+        };
         var confirm = new Button { Content = confirmLabel, MinWidth = 100 };
         confirm.Click += (_, _) => Close(true);
         Content = new StackPanel

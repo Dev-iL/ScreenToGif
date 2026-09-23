@@ -194,11 +194,25 @@ public static class ProjectArchive
                 return;
             foreach (var path in Directory.EnumerateDirectories(root))
             {
-                if (IsOwnedByLiveProcess(path))
+                var ownership = ReadOwnership(path);
+                if (ownership == WorkspaceOwnership.Live)
                     continue;
-                var ownerPath = Path.Combine(path, OwnerFileName);
-                if (!File.Exists(ownerPath) && retentionDays > 0 && Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-retentionDays))
+
+                // Only a claim that names a process known to be gone justifies deleting on sight.
+                // A claim that cannot be read yet is the common shape of a workspace being created
+                // right now by another instance, so it keeps the retention grace a missing claim has.
+                if (ownership == WorkspaceOwnership.Unknown && retentionDays > 0 &&
+                    Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-retentionDays))
                     continue;
+
+                // A recording is the only artifact here the user cannot recreate from a file they
+                // still hold, so a recorder that died before it could hand its frames over leaves
+                // the one copy. It gets the same grace, whoever owned it, rather than being swept
+                // away before the person who made it has had a chance to come back for it.
+                if (retentionDays > 0 && HoldsRecordedFrames(path) &&
+                    Directory.GetLastWriteTimeUtc(path) > DateTime.UtcNow.AddDays(-retentionDays))
+                    continue;
+
                 TryDeleteWorkspace(path);
             }
         }
@@ -206,19 +220,65 @@ public static class ProjectArchive
         catch (UnauthorizedAccessException) { }
     }
 
-    private static bool IsOwnedByLiveProcess(string workspacePath)
+    private static bool HoldsRecordedFrames(string workspacePath)
     {
         try
         {
-            var parts = File.ReadAllText(Path.Combine(workspacePath, OwnerFileName)).Split('|');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out var processId) || !long.TryParse(parts[1], out var startTicks))
-                return false;
-            using var process = Process.GetProcessById(processId);
-            return process.StartTime.ToUniversalTime().Ticks == startTicks && !process.HasExited;
+            var recordings = Path.Combine(workspacePath, EditorWorkspace.FolderName(EditorArtifactKind.Recordings));
+            return Directory.Exists(recordings) &&
+                   Directory.EnumerateFiles(recordings, "*", SearchOption.AllDirectories).Any();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return false;
+            // Unreadable is not the same as empty, so keep the workspace rather than risk the loss.
+            return true;
+        }
+    }
+
+    private enum WorkspaceOwnership
+    {
+        /// <summary>The claim names a process that is still running; the workspace is in use.</summary>
+        Live,
+
+        /// <summary>The claim names a process that has exited; the workspace was abandoned.</summary>
+        Dead,
+
+        /// <summary>There is no readable claim, so nothing is known about who owns this.</summary>
+        Unknown
+    }
+
+    private static WorkspaceOwnership ReadOwnership(string workspacePath)
+    {
+        var ownerPath = Path.Combine(workspacePath, OwnerFileName);
+        string contents;
+        try
+        {
+            contents = File.ReadAllText(ownerPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return WorkspaceOwnership.Unknown;
+        }
+
+        var parts = contents.Split('|');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out var processId) || !long.TryParse(parts[1], out var startTicks))
+            return WorkspaceOwnership.Unknown;
+
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            return process.StartTime.ToUniversalTime().Ticks == startTicks && !process.HasExited
+                ? WorkspaceOwnership.Live
+                : WorkspaceOwnership.Dead;
+        }
+        catch (ArgumentException)
+        {
+            // No process carries that id any more.
+            return WorkspaceOwnership.Dead;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return WorkspaceOwnership.Unknown;
         }
     }
 

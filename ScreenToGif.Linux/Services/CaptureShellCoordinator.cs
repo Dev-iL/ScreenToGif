@@ -11,6 +11,13 @@ public interface ICaptureShellWindow
 {
     event EventHandler? Closed;
 
+    /// <summary>
+    /// True once this shell has passed its result to another window, which then owns the session.
+    /// Startup stays closed in that case rather than reappearing behind the editor. Shells that
+    /// produce nothing never set it, which is why it has a default.
+    /// </summary>
+    bool HandedOffToEditor => false;
+
     void Show();
 
     void Activate();
@@ -23,6 +30,9 @@ public interface ICaptureShellHost
     void HideStartup();
 
     void RestoreStartup();
+
+    /// <summary>Closes Startup for good, because another window has taken over the session.</summary>
+    void CloseStartup();
 }
 
 /// <summary>
@@ -72,6 +82,10 @@ public sealed class CaptureShellCoordinator(ICaptureShellHost host)
         shell.Closed -= ShellClosed;
         _activeShell = null;
         ActiveKind = null;
-        host.RestoreStartup();
+
+        if (shell.HandedOffToEditor)
+            host.CloseStartup();
+        else
+            host.RestoreStartup();
     }
 }

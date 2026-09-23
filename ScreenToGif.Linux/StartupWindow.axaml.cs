@@ -20,13 +20,32 @@ public partial class StartupWindow : Window, ICaptureShellHost
     }
 
     private void OpenRecorderClick(object? sender, RoutedEventArgs e) =>
-        _captureShellCoordinator.Open(CaptureShellKind.Recorder);
+        OpenShell(CaptureShellKind.Recorder, "Recorder");
 
     private void OpenWebcamClick(object? sender, RoutedEventArgs e) =>
-        _captureShellCoordinator.Open(CaptureShellKind.Webcam);
+        OpenShell(CaptureShellKind.Webcam, "Webcam");
 
     private void OpenBoardClick(object? sender, RoutedEventArgs e) =>
-        _captureShellCoordinator.Open(CaptureShellKind.Board);
+        OpenShell(CaptureShellKind.Board, "Board");
+
+    /// <summary>
+    /// Opens a capture shell, saying so when it cannot open. Without this the coordinator's
+    /// failure reaches the dispatcher and the user sees a button that does nothing.
+    /// </summary>
+    private async void OpenShell(CaptureShellKind kind, string name)
+    {
+        try
+        {
+            _captureShellCoordinator.Open(kind);
+        }
+        catch (Exception exception)
+        {
+            await new Controls.ConfirmDialog(
+                $"The {name} could not open",
+                exception.Message,
+                "Close").ShowForAsync(this);
+        }
+    }
 
     private void OpenEditorClick(object? sender, RoutedEventArgs e)
     {
@@ -41,7 +60,7 @@ public partial class StartupWindow : Window, ICaptureShellHost
         Close();
     }
 
-    private void OpenOptionsClick(object? sender, RoutedEventArgs e) => App.CurrentApp?.ShowOptions(this);
+    private void OpenOptionsClick(object? sender, RoutedEventArgs e) => _ = App.CurrentApp?.ShowOptions(this);
 
     public ICaptureShellWindow CreateShell(CaptureShellKind kind) => kind switch
     {
@@ -52,6 +71,16 @@ public partial class StartupWindow : Window, ICaptureShellHost
     };
 
     public void HideStartup() => Hide();
+
+    public void CloseStartup()
+    {
+        if (_isClosed)
+            return;
+
+        // The editor is the application's window now, so Startup going away must not end the run.
+        _openingEditor = true;
+        Close();
+    }
 
     public void RestoreStartup()
     {

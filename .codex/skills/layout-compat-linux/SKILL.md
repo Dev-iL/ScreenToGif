@@ -11,7 +11,7 @@ Make each Linux surface read like its Windows counterpart in structure, button p
 
 Treat the matching WPF XAML and its control templates as the geometry source of truth. Copy scalar layout values—row and column definitions, widths, heights, margins, padding, icon bounds, font sizes, borders, and group separators—directly into Avalonia unless a documented platform or framework difference prevents it.
 
-Read [the porting guide](references/porting.md) before changing a surface. It maps the source of truth, defines the compatibility-control boundary, and records the editor baseline.
+Read [the porting guide](references/porting.md) before changing a surface. It maps the source of truth, defines the compatibility-control boundary, records the editor baseline, and lists the Fluent defaults that override copied geometry.
 
 When changing the editor ribbon, also read [the editor ribbon reference](references/editor-ribbon.md). It records the proven shared metrics and when to use each compatibility control.
 
@@ -29,7 +29,7 @@ Preserve feature position even when its behavior is unavailable: render it disab
 
 Source parity is insufficient. Capture the Linux surface at the matching window size, compare it with the supplied Windows screenshot or its matching WPF layout, and correct the first visible positional mismatch before cosmetic polish.
 
-For capture setup, known environment limitations, and the required comparison checks, read [verification](references/verification.md). Use the capture helper there only when a virtual X display is available.
+For capture setup, known environment limitations, and the required comparison checks, read [verification](references/verification.md). It also covers measuring a render by pixel sampling and the precautions for driving the user's real session. Use the capture helper there only when a virtual X display is available.
 
 ## Scope discipline
 

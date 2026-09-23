@@ -1,4 +1,6 @@
 using ScreenToGif.Linux.Services;
+using ScreenToGif.Linux.Services.Capture;
+using System.Text.Json;
 using Xunit;
 
 namespace ScreenToGif.Linux.Tests;
@@ -6,6 +8,146 @@ namespace ScreenToGif.Linux.Tests;
 public sealed class LinuxApplicationSettingsTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"screentogif-settings-{Guid.NewGuid():N}");
+
+    [Fact]
+    public async Task EveryRecorderSettingRoundTripsThroughTheSettingsFile()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        var store = new LinuxApplicationSettingsStore(path);
+        var expected = new LinuxApplicationSettings
+        {
+            RecorderCaptureMode = RecorderCaptureMode.PerHour,
+            RecorderFramesPerSecond = 42,
+            RecorderFixedFrameRate = true,
+            RecorderShowCursor = false,
+            RecorderPreStart = true,
+            RecorderPreStartSeconds = 7,
+            RecorderManualPlaybackDelayMs = 250,
+            RecorderAskBeforeDiscarding = false,
+            RecorderRememberSize = false,
+            RecorderRememberPosition = false,
+            RecorderWidth = 1280,
+            RecorderHeight = 720,
+            RecorderLeft = 314,
+            RecorderTop = 271
+        };
+
+        await store.SaveAsync(expected);
+        var actual = store.Load();
+
+        AssertRecorderSettingsMatch(expected, actual);
+    }
+
+    [Fact]
+    public void CopyCarriesEveryRecorderSetting()
+    {
+        // LinuxSettings.SaveAsync republishes through Copy, so a field missing here is a field
+        // that round-trips through the file and is still lost in the running application.
+        var expected = new LinuxApplicationSettings
+        {
+            RecorderCaptureMode = RecorderCaptureMode.Manual,
+            RecorderFramesPerSecond = 3,
+            RecorderFixedFrameRate = true,
+            RecorderShowCursor = false,
+            RecorderPreStart = true,
+            RecorderPreStartSeconds = 9,
+            RecorderManualPlaybackDelayMs = 1500,
+            RecorderAskBeforeDiscarding = false,
+            RecorderRememberSize = false,
+            RecorderRememberPosition = false,
+            RecorderWidth = 640,
+            RecorderHeight = 480,
+            RecorderLeft = -12,
+            RecorderTop = 0
+        };
+
+        AssertRecorderSettingsMatch(expected, expected.Copy());
+    }
+
+    [Fact]
+    public void ASettingsFileWrittenBeforeTheRecorderExistedLoadsWithTheWindowsDefaults()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(path, """
+            {
+              "SingleInstance": false,
+              "UndoLimit": 25,
+              "FfmpegPath": "ffmpeg"
+            }
+            """);
+
+        var loaded = new LinuxApplicationSettingsStore(path).Load();
+
+        Assert.False(loaded.SingleInstance);
+        Assert.Equal(25, loaded.UndoLimit);
+        AssertRecorderDefaultsMirrorWindows(loaded);
+    }
+
+    [Fact]
+    public void ACorruptSettingsFileFallsBackToTheRecorderDefaults()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(path, "{ this is not json");
+
+        AssertRecorderDefaultsMirrorWindows(new LinuxApplicationSettingsStore(path).Load());
+    }
+
+    /// <summary>
+    /// Pins the defaults to the values the Windows recorder ships, rather than to whatever the
+    /// Linux type currently declares: comparing a loaded file against a fresh instance passes
+    /// however the declarations drift, which is the one thing this assertion exists to catch.
+    /// </summary>
+    private static void AssertRecorderDefaultsMirrorWindows(LinuxApplicationSettings actual)
+    {
+        Assert.Equal(RecorderCaptureMode.PerSecond, actual.RecorderCaptureMode);
+        Assert.Equal(15, actual.RecorderFramesPerSecond);
+        Assert.False(actual.RecorderFixedFrameRate);
+        Assert.True(actual.RecorderShowCursor);
+        Assert.False(actual.RecorderPreStart);
+        Assert.Equal(3, actual.RecorderPreStartSeconds);
+        Assert.Equal(1000, actual.RecorderManualPlaybackDelayMs);
+        Assert.True(actual.RecorderAskBeforeDiscarding);
+        Assert.True(actual.RecorderRememberSize);
+        Assert.True(actual.RecorderRememberPosition);
+        Assert.Equal(502, actual.RecorderWidth);
+        Assert.Equal(203, actual.RecorderHeight);
+        Assert.Null(actual.RecorderLeft);
+        Assert.Null(actual.RecorderTop);
+    }
+
+    [Fact]
+    public async Task AnUnplacedRecorderPersistsNoPositionRatherThanAFalseOne()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        var store = new LinuxApplicationSettingsStore(path);
+
+        await store.SaveAsync(new LinuxApplicationSettings());
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("RecorderLeft").ValueKind);
+        Assert.Null(store.Load().RecorderLeft);
+        Assert.Null(store.Load().RecorderTop);
+    }
+
+    private static void AssertRecorderSettingsMatch(LinuxApplicationSettings expected, LinuxApplicationSettings actual)
+    {
+        Assert.Equal(expected.RecorderCaptureMode, actual.RecorderCaptureMode);
+        Assert.Equal(expected.RecorderFramesPerSecond, actual.RecorderFramesPerSecond);
+        Assert.Equal(expected.RecorderFixedFrameRate, actual.RecorderFixedFrameRate);
+        Assert.Equal(expected.RecorderShowCursor, actual.RecorderShowCursor);
+        Assert.Equal(expected.RecorderPreStart, actual.RecorderPreStart);
+        Assert.Equal(expected.RecorderPreStartSeconds, actual.RecorderPreStartSeconds);
+        Assert.Equal(expected.RecorderManualPlaybackDelayMs, actual.RecorderManualPlaybackDelayMs);
+        Assert.Equal(expected.RecorderAskBeforeDiscarding, actual.RecorderAskBeforeDiscarding);
+        Assert.Equal(expected.RecorderRememberSize, actual.RecorderRememberSize);
+        Assert.Equal(expected.RecorderRememberPosition, actual.RecorderRememberPosition);
+        Assert.Equal(expected.RecorderWidth, actual.RecorderWidth);
+        Assert.Equal(expected.RecorderHeight, actual.RecorderHeight);
+        Assert.Equal(expected.RecorderLeft, actual.RecorderLeft);
+        Assert.Equal(expected.RecorderTop, actual.RecorderTop);
+    }
 
     [Fact]
     public async Task SettingsRoundTripEverySupportedApplicationChoice()

@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -96,6 +96,7 @@ public partial class MainWindow : Window
                 frame.Dispose();
             throw;
         }
+
         foreach (var frame in prepared)
             _frames.Add(frame);
 
@@ -149,6 +150,7 @@ public partial class MainWindow : Window
                 frame.Thumbnail = bitmap.Thumbnail;
                 cancellationToken.ThrowIfCancellationRequested();
             }
+
             return prepared;
         }
         catch
@@ -172,6 +174,7 @@ public partial class MainWindow : Window
                 bitmaps.Add(PrepareBitmap(path));
                 cancellationToken.ThrowIfCancellationRequested();
             }
+
             return bitmaps.ToArray();
         }
         catch
@@ -375,6 +378,7 @@ public partial class MainWindow : Window
                 SetError(result.Error!);
                 break;
         }
+
         if (result.CloseRequested)
             Dispatcher.UIThread.Post(Close);
     }

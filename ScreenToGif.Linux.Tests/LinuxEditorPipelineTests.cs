@@ -240,18 +240,43 @@ public sealed class LinuxEditorPipelineTests : IDisposable
                 output
             ]);
             Assert.False(string.IsNullOrWhiteSpace(probe.StandardOutput));
+            // Each frame starts where the delays before it end, and the last frame lasts its own
+            // delay. An animated image holds exactly the project's frames; a video ends on a copy
+            // of the last frame, since that copy is what gives the last frame its duration.
+            var isVideo = extension is "mp4" or "webm";
             var packets = await ReadPacketTimingAsync(output);
-            Assert.Equal(4, packets.Count);
-            var expectedTimestamps = new[] { 0d, 0.04d, 0.20d, 0.28d };
+            Assert.Equal(frames.Length + (isVideo ? 1 : 0), packets.Count);
+            var expectedTimestamps = new[] { 0d, 0.04d, 0.20d };
             for (var index = 0; index < expectedTimestamps.Length; index++)
                 Assert.InRange(Math.Abs(packets[index].Pts - expectedTimestamps[index]), 0, 0.005);
+            var lastFrameDuration = isVideo ? packets[3].Pts - packets[2].Pts : packets[2].Duration;
+            Assert.InRange(Math.Abs(lastFrameDuration - 0.08d), 0, 0.005);
             var actualLumas = await AverageLumasAsync(output);
-            Assert.Equal(4, actualLumas.Count);
+            Assert.Equal(packets.Count, actualLumas.Count);
             for (var index = 0; index < expectedLumas.Count; index++)
                 Assert.InRange(Math.Abs(expectedLumas[index] - actualLumas[index]), 0, 3);
-            Assert.InRange(Math.Abs(expectedLumas[2] - actualLumas[3]), 0, 3);
+            if (isVideo)
+                Assert.InRange(Math.Abs(expectedLumas[2] - actualLumas[3]), 0, 3);
         }
 
+        DisposeFrames(frames);
+    }
+
+    [Fact]
+    public async Task A_last_frame_held_past_the_gif_limit_exports_at_the_limit()
+    {
+        var frames = new[]
+        {
+            new EditorFrame(await CreateColorFrameAsync("red", "held-red.png"), 40),
+            new EditorFrame(await CreateColorFrameAsync("blue", "held-blue.png"), 700_000)
+        };
+        var output = Path.Combine(_root, "held.gif");
+
+        await new FfmpegExporter(_ffmpeg).ExportAsync(frames, output);
+
+        var packets = await ReadPacketTimingAsync(output);
+        Assert.Equal(2, packets.Count);
+        Assert.InRange(Math.Abs(packets[1].Duration - 655.35d), 0, 0.005);
         DisposeFrames(frames);
     }
 

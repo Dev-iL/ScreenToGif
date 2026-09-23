@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -34,6 +34,7 @@ public partial class MainWindow
             SetError(ex);
             return;
         }
+
         var values = await new Controls.ParameterDialog(
             "Resize selected frames",
             ("Width (pixels)", size.Width.ToString()),
@@ -70,6 +71,7 @@ public partial class MainWindow
             SetError(ex);
             return;
         }
+
         var values = await new Controls.ParameterDialog(
             "Crop selected frames",
             ("Left (pixels)", "0"),
@@ -129,6 +131,7 @@ public partial class MainWindow
             SetStatus("Select at least one frame to add a border.");
             return;
         }
+
         var values = await new Controls.ParameterDialog("Add black border", ("Border width (pixels)", "8")).ShowForAsync(this);
         if (values is null || !TryTransformDimension(
                 values[0], "Border width", out var width, FrameTransformService.MaximumDimension / 2))
@@ -145,6 +148,7 @@ public partial class MainWindow
             SetStatus("Select at least one frame to add a shadow.");
             return;
         }
+
         await ApplyTransformAsync(selected, new FrameTransformRequest(FrameTransformKind.Shadow), "Add shadow");
     }
 
@@ -184,5 +188,4 @@ public partial class MainWindow
             CommitEditorMutation(description, before, $"{description} completed for {transformed.Count} frame(s).");
         });
     }
-
 }

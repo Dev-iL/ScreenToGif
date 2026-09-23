@@ -9,7 +9,8 @@ public enum EditorArtifactKind
     Edits,
     Transitions,
     Pastes,
-    Clipboard
+    Clipboard,
+    Recordings
 }
 
 /// <summary>Owns one editor workspace and the lifetime of every generated artifact batch.</summary>
@@ -55,7 +56,7 @@ public sealed class EditorWorkspace : IDisposable
         foreach (var kind in new[]
                  {
                      EditorArtifactKind.Frames, EditorArtifactKind.Imports, EditorArtifactKind.Edits,
-                     EditorArtifactKind.Transitions, EditorArtifactKind.Pastes
+                     EditorArtifactKind.Transitions, EditorArtifactKind.Pastes, EditorArtifactKind.Recordings
                  })
         {
             var root = Path.Combine(RootPath, FolderName(kind));
@@ -68,6 +69,7 @@ public sealed class EditorWorkspace : IDisposable
                     if (!referenced.Contains(Path.GetFullPath(file)))
                         TryDeleteFile(file);
                 }
+
                 foreach (var directory in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories)
                              .OrderByDescending(path => path.Length))
                     TryDeleteEmptyDirectory(directory);
@@ -85,7 +87,12 @@ public sealed class EditorWorkspace : IDisposable
         ProjectArchive.TryDeleteWorkspace(RootPath);
     }
 
-    private static string FolderName(EditorArtifactKind kind) => kind switch
+    /// <summary>
+    /// The directory one artifact kind lives in, relative to a workspace root. Internal because the
+    /// workspace scavenger has to recognise a kind from the outside, and one spelling of these
+    /// names is what keeps the two agreeing.
+    /// </summary>
+    internal static string FolderName(EditorArtifactKind kind) => kind switch
     {
         EditorArtifactKind.Frames => "frames",
         EditorArtifactKind.Imports => "imports",
@@ -93,12 +100,16 @@ public sealed class EditorWorkspace : IDisposable
         EditorArtifactKind.Transitions => "transitions",
         EditorArtifactKind.Pastes => "pastes",
         EditorArtifactKind.Clipboard => "clipboard",
+        EditorArtifactKind.Recordings => "recordings",
         _ => throw new ArgumentOutOfRangeException(nameof(kind))
     };
 
     private static void TryDeleteFile(string path)
     {
-        try { File.Delete(path); }
+        try
+        {
+            File.Delete(path);
+        }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

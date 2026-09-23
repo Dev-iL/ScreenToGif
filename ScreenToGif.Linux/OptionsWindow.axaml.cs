@@ -4,19 +4,34 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
 using ScreenToGif.Linux.Services;
+using ScreenToGif.Linux.Services.Capture;
 using System.Diagnostics;
 
 namespace ScreenToGif.Linux;
 
+/// <summary>The Options sections another window can ask to be shown, by the tag the list carries.</summary>
+public enum OptionsSection
+{
+    Application,
+    Recorder,
+    Editor,
+    Shortcuts,
+    Storage
+}
+
 public partial class OptionsWindow : Window
 {
     private readonly LinuxAutostartService _autostart = new();
-    private readonly LinuxApplicationSettings _settings = LinuxSettings.Current.Copy();
+    private RecorderCaptureMode _seededCaptureMode;
     private bool _ready;
     private bool _saving;
     private bool _allowClose;
 
-    public OptionsWindow()
+    public OptionsWindow() : this(OptionsSection.Application)
+    {
+    }
+
+    public OptionsWindow(OptionsSection section)
     {
         InitializeComponent();
         LoadSettings();
@@ -24,37 +39,76 @@ public partial class OptionsWindow : Window
         Closing += WindowClosing;
         _ready = true;
         UpdateDependencies();
+        ShowSection(section);
+    }
+
+    /// <summary>Selects a section, so another window can open Options where its own settings live.</summary>
+    public void ShowSection(OptionsSection section)
+    {
+        var tag = section.ToString();
+        var item = SectionsList.Items.OfType<ListBoxItem>()
+            .FirstOrDefault(candidate => string.Equals(candidate.Tag as string, tag, StringComparison.Ordinal));
+
+        if (item is not null)
+            SectionsList.SelectedItem = item;
     }
 
     private void LoadSettings()
     {
+        var settings = LinuxSettings.Current;
         StartManuallyRadio.IsChecked = !_autostart.IsEnabled();
         StartAutomaticallyRadio.IsChecked = !StartManuallyRadio.IsChecked;
-        SingleInstanceRadio.IsChecked = _settings.SingleInstance;
-        MultipleInstancesRadio.IsChecked = !_settings.SingleInstance;
-        StartMinimizedCheckBox.IsChecked = _settings.StartMinimized;
-        StartupWindowComboBox.SelectedIndex = (int)_settings.StartupWindow;
-        ThemeComboBox.SelectedIndex = (int)_settings.Theme;
-        ShowTrayIconCheckBox.IsChecked = _settings.ShowNotificationIcon;
-        KeepOpenCheckBox.IsChecked = _settings.KeepOpen;
-        LeftActionComboBox.SelectedIndex = (int)_settings.LeftClickAction;
-        LeftWindowComboBox.SelectedIndex = (int)_settings.LeftClickWindow;
-        DoubleLeftActionComboBox.SelectedIndex = (int)_settings.DoubleLeftClickAction;
-        DoubleLeftWindowComboBox.SelectedIndex = (int)_settings.DoubleLeftClickWindow;
-        MiddleActionComboBox.SelectedIndex = (int)_settings.MiddleClickAction;
-        MiddleWindowComboBox.SelectedIndex = (int)_settings.MiddleClickWindow;
-        DisableHardwareAccelerationCheckBox.IsChecked = _settings.DisableHardwareAcceleration;
-        AskBeforeDeleteFramesCheckBox.IsChecked = _settings.AskBeforeDeleteFrames;
-        AskBeforeDiscardProjectCheckBox.IsChecked = _settings.AskBeforeDiscardProject;
-        AskBeforeCloseEditorCheckBox.IsChecked = _settings.AskBeforeCloseEditor;
-        DropFramesSettingCheckBox.IsChecked = _settings.DropFramesWhenBehind;
-        LimitUndoCheckBox.IsChecked = _settings.UndoLimit > 0;
-        UndoLimitUpDown.Value = Math.Clamp(_settings.UndoLimit, 1, 100);
-        DeleteCacheOnCloseCheckBox.IsChecked = _settings.DeleteCacheOnClose;
-        RemoveOldProjectsCheckBox.IsChecked = _settings.RemoveOldProjects;
-        RetentionDaysUpDown.Value = Math.Clamp(_settings.ProjectRetentionDays, 1, 30);
-        FfmpegPathTextBox.Text = _settings.FfmpegPath;
+        SingleInstanceRadio.IsChecked = settings.SingleInstance;
+        MultipleInstancesRadio.IsChecked = !settings.SingleInstance;
+        StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
+        StartupWindowComboBox.SelectedIndex = (int)settings.StartupWindow;
+        ThemeComboBox.SelectedIndex = (int)settings.Theme;
+        ShowTrayIconCheckBox.IsChecked = settings.ShowNotificationIcon;
+        KeepOpenCheckBox.IsChecked = settings.KeepOpen;
+        LeftActionComboBox.SelectedIndex = (int)settings.LeftClickAction;
+        LeftWindowComboBox.SelectedIndex = (int)settings.LeftClickWindow;
+        DoubleLeftActionComboBox.SelectedIndex = (int)settings.DoubleLeftClickAction;
+        DoubleLeftWindowComboBox.SelectedIndex = (int)settings.DoubleLeftClickWindow;
+        MiddleActionComboBox.SelectedIndex = (int)settings.MiddleClickAction;
+        MiddleWindowComboBox.SelectedIndex = (int)settings.MiddleClickWindow;
+        DisableHardwareAccelerationCheckBox.IsChecked = settings.DisableHardwareAcceleration;
+        AskBeforeDeleteFramesCheckBox.IsChecked = settings.AskBeforeDeleteFrames;
+        AskBeforeDiscardProjectCheckBox.IsChecked = settings.AskBeforeDiscardProject;
+        AskBeforeCloseEditorCheckBox.IsChecked = settings.AskBeforeCloseEditor;
+        DropFramesSettingCheckBox.IsChecked = settings.DropFramesWhenBehind;
+        LimitUndoCheckBox.IsChecked = settings.UndoLimit > 0;
+        UndoLimitUpDown.Value = Math.Clamp(settings.UndoLimit, 1, 100);
+        DeleteCacheOnCloseCheckBox.IsChecked = settings.DeleteCacheOnClose;
+        RemoveOldProjectsCheckBox.IsChecked = settings.RemoveOldProjects;
+        RetentionDaysUpDown.Value = Math.Clamp(settings.ProjectRetentionDays, 1, 30);
+        FfmpegPathTextBox.Text = settings.FfmpegPath;
+        LoadRecorderSettings(settings);
     }
+
+    private void LoadRecorderSettings(LinuxApplicationSettings settings)
+    {
+        _seededCaptureMode = settings.RecorderCaptureMode;
+        RecorderManualRadio.IsChecked = settings.RecorderCaptureMode == RecorderCaptureMode.Manual;
+        RecorderPerSecondRadio.IsChecked = settings.RecorderCaptureMode == RecorderCaptureMode.PerSecond;
+        RecorderPerMinuteRadio.IsChecked = settings.RecorderCaptureMode == RecorderCaptureMode.PerMinute;
+        RecorderPerHourRadio.IsChecked = settings.RecorderCaptureMode == RecorderCaptureMode.PerHour;
+        RecorderFixedFrameRateCheckBox.IsChecked = settings.RecorderFixedFrameRate;
+        RecorderManualDelayUpDown.Value = settings.RecorderManualPlaybackDelayMs;
+        RecorderShowCursorCheckBox.IsChecked = settings.RecorderShowCursor;
+        RecorderRememberSizeCheckBox.IsChecked = settings.RecorderRememberSize;
+        RecorderRememberPositionCheckBox.IsChecked = settings.RecorderRememberPosition;
+        RecorderPreStartCheckBox.IsChecked = settings.RecorderPreStart;
+        RecorderPreStartSecondsUpDown.Value = settings.RecorderPreStartSeconds;
+        RecorderAskBeforeDiscardingCheckBox.IsChecked = settings.RecorderAskBeforeDiscarding;
+    }
+
+    private void RecorderFrequencyChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_ready)
+            UpdateDependencies();
+    }
+
+    private void RecorderDependencyChanged(object? sender, RoutedEventArgs e) => UpdateDependencies();
 
     private void SectionSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -135,6 +189,18 @@ public partial class OptionsWindow : Window
         var opensWindow = LeftActionComboBox.SelectedIndex == (int)LinuxTrayAction.OpenWindow;
         LeftWindowLabel.Text = opensWindow ? "Window:" : "Or else, opens:";
         LeftWindowComboBox.IsEnabled = trayEnabled;
+
+        // A fixed frame rate and a manual delay each belong to one capture mode only.
+        RecorderFixedFrameRateCheckBox.IsEnabled = RecorderPerSecondRadio.IsChecked == true;
+        RecorderManualDelayRow.IsEnabled = RecorderManualRadio.IsChecked == true;
+        RecorderPreStartSecondsRow.IsEnabled = RecorderPreStartCheckBox.IsChecked == true;
+
+        // The location is remembered only alongside the size, as on Windows, and is cleared when
+        // the size stops being remembered so the page never shows an option that will not apply.
+        var rememberSize = RecorderRememberSizeCheckBox.IsChecked == true;
+        RecorderRememberPositionCheckBox.IsEnabled = rememberSize;
+        if (!rememberSize)
+            RecorderRememberPositionCheckBox.IsChecked = false;
     }
 
     private void ThemeSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -145,30 +211,65 @@ public partial class OptionsWindow : Window
         App.ApplyTheme((LinuxAppTheme)ThemeComboBox.SelectedIndex);
     }
 
-    private void ReadSettings()
+    /// <summary>
+    /// Applies every control's value onto <paramref name="settings"/>. Fields this window has no
+    /// control for are left as they are, so a value another window wrote while this one was open,
+    /// such as the Recorder's frame rate, is not written back over.
+    /// </summary>
+    private void ReadSettings(LinuxApplicationSettings settings)
     {
-        _settings.SingleInstance = SingleInstanceRadio.IsChecked == true;
-        _settings.StartMinimized = StartMinimizedCheckBox.IsChecked == true;
-        _settings.StartupWindow = (LinuxStartupWindow)Math.Max(0, StartupWindowComboBox.SelectedIndex);
-        _settings.Theme = (LinuxAppTheme)Math.Max(0, ThemeComboBox.SelectedIndex);
-        _settings.ShowNotificationIcon = ShowTrayIconCheckBox.IsChecked == true;
-        _settings.KeepOpen = KeepOpenCheckBox.IsChecked == true;
-        _settings.LeftClickAction = (LinuxTrayAction)Math.Max(0, LeftActionComboBox.SelectedIndex);
-        _settings.LeftClickWindow = (LinuxTrayWindow)Math.Max(0, LeftWindowComboBox.SelectedIndex);
-        _settings.DoubleLeftClickAction = (LinuxTrayAction)Math.Max(0, DoubleLeftActionComboBox.SelectedIndex);
-        _settings.DoubleLeftClickWindow = (LinuxTrayWindow)Math.Max(0, DoubleLeftWindowComboBox.SelectedIndex);
-        _settings.MiddleClickAction = (LinuxTrayAction)Math.Max(0, MiddleActionComboBox.SelectedIndex);
-        _settings.MiddleClickWindow = (LinuxTrayWindow)Math.Max(0, MiddleWindowComboBox.SelectedIndex);
-        _settings.DisableHardwareAcceleration = DisableHardwareAccelerationCheckBox.IsChecked == true;
-        _settings.AskBeforeDeleteFrames = AskBeforeDeleteFramesCheckBox.IsChecked == true;
-        _settings.AskBeforeDiscardProject = AskBeforeDiscardProjectCheckBox.IsChecked == true;
-        _settings.AskBeforeCloseEditor = AskBeforeCloseEditorCheckBox.IsChecked == true;
-        _settings.DropFramesWhenBehind = DropFramesSettingCheckBox.IsChecked == true;
-        _settings.UndoLimit = LimitUndoCheckBox.IsChecked == true ? (int)(UndoLimitUpDown.Value ?? 50) : 0;
-        _settings.DeleteCacheOnClose = DeleteCacheOnCloseCheckBox.IsChecked == true;
-        _settings.RemoveOldProjects = RemoveOldProjectsCheckBox.IsChecked == true;
-        _settings.ProjectRetentionDays = (int)(RetentionDaysUpDown.Value ?? 5);
-        _settings.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPathTextBox.Text) ? "ffmpeg" : FfmpegPathTextBox.Text.Trim();
+        settings.SingleInstance = SingleInstanceRadio.IsChecked == true;
+        settings.StartMinimized = StartMinimizedCheckBox.IsChecked == true;
+        settings.StartupWindow = (LinuxStartupWindow)Math.Max(0, StartupWindowComboBox.SelectedIndex);
+        settings.Theme = (LinuxAppTheme)Math.Max(0, ThemeComboBox.SelectedIndex);
+        settings.ShowNotificationIcon = ShowTrayIconCheckBox.IsChecked == true;
+        settings.KeepOpen = KeepOpenCheckBox.IsChecked == true;
+        settings.LeftClickAction = (LinuxTrayAction)Math.Max(0, LeftActionComboBox.SelectedIndex);
+        settings.LeftClickWindow = (LinuxTrayWindow)Math.Max(0, LeftWindowComboBox.SelectedIndex);
+        settings.DoubleLeftClickAction = (LinuxTrayAction)Math.Max(0, DoubleLeftActionComboBox.SelectedIndex);
+        settings.DoubleLeftClickWindow = (LinuxTrayWindow)Math.Max(0, DoubleLeftWindowComboBox.SelectedIndex);
+        settings.MiddleClickAction = (LinuxTrayAction)Math.Max(0, MiddleActionComboBox.SelectedIndex);
+        settings.MiddleClickWindow = (LinuxTrayWindow)Math.Max(0, MiddleWindowComboBox.SelectedIndex);
+        settings.DisableHardwareAcceleration = DisableHardwareAccelerationCheckBox.IsChecked == true;
+        settings.AskBeforeDeleteFrames = AskBeforeDeleteFramesCheckBox.IsChecked == true;
+        settings.AskBeforeDiscardProject = AskBeforeDiscardProjectCheckBox.IsChecked == true;
+        settings.AskBeforeCloseEditor = AskBeforeCloseEditorCheckBox.IsChecked == true;
+        settings.DropFramesWhenBehind = DropFramesSettingCheckBox.IsChecked == true;
+        settings.UndoLimit = LimitUndoCheckBox.IsChecked == true ? (int)(UndoLimitUpDown.Value ?? 50) : 0;
+        settings.DeleteCacheOnClose = DeleteCacheOnCloseCheckBox.IsChecked == true;
+        settings.RemoveOldProjects = RemoveOldProjectsCheckBox.IsChecked == true;
+        settings.ProjectRetentionDays = (int)(RetentionDaysUpDown.Value ?? 5);
+        settings.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPathTextBox.Text) ? "ffmpeg" : FfmpegPathTextBox.Text.Trim();
+        ReadRecorderSettings(settings);
+    }
+
+    private void ReadRecorderSettings(LinuxApplicationSettings settings)
+    {
+        // The capture mode is the one field the Recorder also edits, so it is written only when
+        // these radios were changed; a mode chosen in the Recorder while Options was open survives Ok.
+        var captureMode = SelectedRecorderCaptureMode();
+        if (captureMode != _seededCaptureMode)
+            settings.RecorderCaptureMode = captureMode;
+        settings.RecorderFixedFrameRate = RecorderFixedFrameRateCheckBox.IsChecked == true;
+        settings.RecorderManualPlaybackDelayMs = (int)(RecorderManualDelayUpDown.Value ?? 1000);
+        settings.RecorderShowCursor = RecorderShowCursorCheckBox.IsChecked == true;
+        settings.RecorderRememberSize = RecorderRememberSizeCheckBox.IsChecked == true;
+        settings.RecorderRememberPosition = RecorderRememberPositionCheckBox.IsChecked == true;
+        settings.RecorderPreStart = RecorderPreStartCheckBox.IsChecked == true;
+        settings.RecorderPreStartSeconds = (int)(RecorderPreStartSecondsUpDown.Value ?? 3);
+        settings.RecorderAskBeforeDiscarding = RecorderAskBeforeDiscardingCheckBox.IsChecked == true;
+    }
+
+    private RecorderCaptureMode SelectedRecorderCaptureMode()
+    {
+        if (RecorderManualRadio.IsChecked == true)
+            return RecorderCaptureMode.Manual;
+        if (RecorderPerMinuteRadio.IsChecked == true)
+            return RecorderCaptureMode.PerMinute;
+        if (RecorderPerHourRadio.IsChecked == true)
+            return RecorderCaptureMode.PerHour;
+
+        return RecorderCaptureMode.PerSecond;
     }
 
     private void LoadStorageStatus()
@@ -230,6 +331,7 @@ public partial class OptionsWindow : Window
             value /= 1024;
             unit++;
         }
+
         return $"{value:0.#} {units[unit]}";
     }
 
@@ -248,10 +350,13 @@ public partial class OptionsWindow : Window
         StatusText.Text = "Saving settings...";
         try
         {
-            ReadSettings();
+            // Committed onto the store as it is now, not as it was when this window opened, so
+            // fields edited elsewhere in the meantime keep their latest value.
+            var settings = LinuxSettings.Current.Copy();
+            ReadSettings(settings);
             await _autostart.SetEnabledAsync(StartAutomaticallyRadio.IsChecked == true);
-            await LinuxSettings.SaveAsync(_settings);
-            App.ApplyTheme(_settings.Theme);
+            await LinuxSettings.SaveAsync(settings);
+            App.ApplyTheme(settings.Theme);
             App.CurrentApp?.RefreshTrayIcon();
             _allowClose = true;
             Close();

@@ -1,4 +1,6 @@
+using ScreenToGif.Linux.Models;
 using ScreenToGif.Linux.Services;
+using ScreenToGif.Linux.Services.Capture;
 using Xunit;
 
 namespace ScreenToGif.Linux.Tests;
@@ -61,6 +63,108 @@ public sealed class CaptureShellCoordinatorTests
         Assert.Equal(2, host.Created.Count);
     }
 
+    [Fact]
+    public void A_shell_that_handed_its_recording_to_the_editor_closes_startup_instead_of_restoring_it()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Recorder));
+        host.Created[0].HandedOffToEditor = true;
+        host.Created[0].Close();
+
+        Assert.Equal(1, host.CloseCount);
+        Assert.Equal(0, host.RestoreCount);
+        Assert.False(host.StartupVisible);
+        Assert.Null(coordinator.ActiveKind);
+    }
+
+    [Fact]
+    public void A_shell_that_closed_without_a_recording_brings_startup_back()
+    {
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+
+        Assert.True(coordinator.Open(CaptureShellKind.Recorder));
+        host.Created[0].Close();
+
+        Assert.Equal(0, host.CloseCount);
+        Assert.Equal(1, host.RestoreCount);
+        Assert.True(host.StartupVisible);
+    }
+
+    [Fact]
+    public async Task A_hand_off_that_fails_deletes_the_recording_and_brings_startup_back()
+    {
+        var workspace = EditorWorkspace.Create();
+        var root = workspace.RootPath;
+        var batch = workspace.CreateBatch(EditorArtifactKind.Recordings);
+        var framePath = Path.Combine(batch, "0.png");
+        await File.WriteAllBytesAsync(framePath, [0x89, 0x50, 0x4E, 0x47]);
+        var project = new LoadedProject(workspace, [new EditorFrame(framePath, 100)]);
+
+        var opening = new InvalidOperationException("The editor could not open the recording.");
+        var failure = await RecordingHandOff.TransferAsync(project, _ => throw opening);
+
+        // Nothing took ownership, so the recording is deleted rather than stranded on disk.
+        Assert.Same(opening, failure);
+        Assert.False(Directory.Exists(root));
+
+        // The other half of the clause: the shell reports the hand-off only once the editor holds
+        // the recording, so a failure leaves the flag clear and Startup comes back.
+        var host = new FakeHost();
+        var coordinator = new CaptureShellCoordinator(host);
+        Assert.True(coordinator.Open(CaptureShellKind.Recorder));
+        Assert.False(host.Created[0].HandedOffToEditor);
+        host.Created[0].Close();
+
+        Assert.True(host.StartupVisible);
+        Assert.Equal(1, host.RestoreCount);
+        Assert.Equal(0, host.CloseCount);
+    }
+
+    [Fact]
+    public async Task A_hand_off_that_completes_leaves_the_recording_to_the_editor()
+    {
+        var workspace = EditorWorkspace.Create();
+        var root = workspace.RootPath;
+        var batch = workspace.CreateBatch(EditorArtifactKind.Recordings);
+        var framePath = Path.Combine(batch, "0.png");
+        await File.WriteAllBytesAsync(framePath, [0x89, 0x50, 0x4E, 0x47]);
+        var project = new LoadedProject(workspace, [new EditorFrame(framePath, 100)]);
+
+        EditorProjectContent? taken = null;
+        var failure = await RecordingHandOff.TransferAsync(project, handedOver =>
+        {
+            taken = handedOver.TransferOwnership();
+            return Task.CompletedTask;
+        });
+
+        Assert.Null(failure);
+        Assert.NotNull(taken);
+        Assert.True(File.Exists(framePath));
+
+        taken?.Workspace.Dispose();
+        Assert.False(Directory.Exists(root));
+    }
+
+    [Fact]
+    public void Shells_that_produce_nothing_never_close_startup()
+    {
+        foreach (var kind in new[] { CaptureShellKind.Webcam, CaptureShellKind.Board })
+        {
+            var host = new FakeHost();
+            var coordinator = new CaptureShellCoordinator(host);
+
+            Assert.True(coordinator.Open(kind));
+            Assert.False(host.Created[0].HandedOffToEditor);
+            host.Created[0].Close();
+
+            Assert.Equal(0, host.CloseCount);
+            Assert.True(host.StartupVisible);
+        }
+    }
+
     private sealed class FakeHost : ICaptureShellHost
     {
         public List<FakeShell> Created { get; } = [];
@@ -72,6 +176,8 @@ public sealed class CaptureShellCoordinatorTests
         public int HideCount { get; private set; }
 
         public int RestoreCount { get; private set; }
+
+        public int CloseCount { get; private set; }
 
         public ICaptureShellWindow CreateShell(CaptureShellKind kind)
         {
@@ -92,6 +198,12 @@ public sealed class CaptureShellCoordinatorTests
             StartupVisible = true;
             RestoreCount++;
         }
+
+        public void CloseStartup()
+        {
+            StartupVisible = false;
+            CloseCount++;
+        }
     }
 
     private sealed class FakeShell(CaptureShellKind kind, bool failShow) : ICaptureShellWindow
@@ -99,6 +211,8 @@ public sealed class CaptureShellCoordinatorTests
         public event EventHandler? Closed;
 
         public CaptureShellKind Kind { get; } = kind;
+
+        public bool HandedOffToEditor { get; set; }
 
         public bool WasShown { get; private set; }
 

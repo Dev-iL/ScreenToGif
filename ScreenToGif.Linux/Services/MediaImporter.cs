@@ -251,6 +251,7 @@ public sealed class MediaImporter
             var estimate = Math.Ceiling(duration * rate);
             return estimate >= int.MaxValue ? int.MaxValue : (int)estimate;
         }
+
         throw new InvalidOperationException("Media frame count could not be determined safely before import.");
     }
 
@@ -278,6 +279,7 @@ public sealed class MediaImporter
                     return rate;
             }
         }
+
         return 0;
     }
 

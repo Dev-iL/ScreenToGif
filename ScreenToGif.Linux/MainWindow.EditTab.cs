@@ -139,6 +139,7 @@ public partial class MainWindow
                 SetStatus("No consecutive pixel-identical frames were found in the selected scope.");
                 return;
             }
+
             await ApplySequenceEditAsync(
                 "Remove duplicates", FrameSequenceOperations.Delete(states, duplicates), [],
                 $"Removed {duplicates.Count} consecutive duplicate frame(s).", cancellationToken);
@@ -162,6 +163,7 @@ public partial class MainWindow
             SetStatus("Select at least two frames, or clear selection to reduce the whole timeline.");
             return;
         }
+
         await RunSequenceEditAsync("Reduce frames", FrameSequenceOperations.Reduce(CurrentStates(), scope, factor), [],
             $"Reduced the scope by keeping every {factor}th frame.");
     }
@@ -175,6 +177,7 @@ public partial class MainWindow
             SetStatus("Smooth loop needs at least two selected frames, or an unselected timeline with two frames.");
             return;
         }
+
         var values = await new Controls.ParameterDialog("Smooth loop", ("Generated frames", "5"), ("Duration (milliseconds)", "500")).ShowForAsync(this);
         if (values is null)
             return;
@@ -203,6 +206,7 @@ public partial class MainWindow
                     frame.Dispose();
                 throw;
             }
+
             FrameSequenceOperations.InsertAfter(_frames, scope[^1], generated);
             RestoreSelection(generated);
             CommitEditorMutation("Smooth loop", before, $"Inserted {generated.Count} smooth-loop frame(s).");
@@ -217,11 +221,13 @@ public partial class MainWindow
             SetStatus("Select a boundary frame first.");
             return;
         }
+
         if (indices[0] == 0)
         {
             SetStatus("There are no frames before the selection.");
             return;
         }
+
         var states = FrameSequenceOperations.DeleteBefore(CurrentStates(), indices[0]);
         await RunSequenceEditAsync("Delete before", states, states.Count == 0 ? [] : [0], "Deleted frames before the selection.");
     }
@@ -234,11 +240,13 @@ public partial class MainWindow
             SetStatus("Select a boundary frame first.");
             return;
         }
+
         if (indices[^1] == _frames.Count - 1)
         {
             SetStatus("There are no frames after the selection.");
             return;
         }
+
         var states = FrameSequenceOperations.DeleteAfter(CurrentStates(), indices[^1]);
         await RunSequenceEditAsync("Delete after", states, states.Count == 0 ? [] : [states.Count - 1], "Deleted frames after the selection.");
     }
@@ -251,6 +259,7 @@ public partial class MainWindow
             SetStatus("Reverse needs at least two selected frames, or an unselected timeline with two frames.");
             return;
         }
+
         await RunSequenceEditAsync("Reverse frames", FrameSequenceOperations.Reverse(CurrentStates(), scope), scope, "Reversed the selected frame positions.");
     }
 
@@ -262,6 +271,7 @@ public partial class MainWindow
             SetStatus("Yoyo needs at least three selected frames, or an unselected timeline with three frames.");
             return;
         }
+
         var insertedCount = scope.Length - 2;
         if (!TryEnsureFrameCapacity(insertedCount, "Creating a yoyo"))
             return;

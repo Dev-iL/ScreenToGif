@@ -4,15 +4,19 @@ Use this reference for settings persistence, Linux startup integration, tray beh
 
 ## Port only real contracts
 
-Render Windows settings whose backing Linux subsystem is absent in-place but disabled with the established tooltip convention. Recorder/task automation, global hotkeys, cloud providers, update and translation services, and Gifski remain unavailable until their underlying subsystem exists. Do not persist inert choices.
+Render Windows settings whose backing Linux subsystem is absent in-place but disabled with the established tooltip convention. Task automation, global hotkeys, cloud providers, update and translation services, and Gifski remain unavailable until their underlying subsystem exists. Do not persist inert choices.
 
-Settings with an existing Linux seam should drive it rather than stop at UI state. Current seams include theme selection, single-instance startup, software rendering, tray visibility and left-click behavior, close/delete/discard confirmations, playback frame dropping, history capacity, stale-workspace cleanup, and FFmpeg discovery.
+Settings with an existing Linux seam should drive it rather than stop at UI state. Current seams include theme selection, single-instance startup, software rendering, tray visibility and left-click behavior, close/delete/discard confirmations, playback frame dropping, history capacity, stale-workspace cleanup, FFmpeg discovery, and the Recorder page (capture mode, fixed frame rate, manual delay, pointer, pre-start, discard confirmation, and remembered size and position).
 
 Avalonia's Linux `TrayIcon` exposes a generic `Clicked` event, not distinct double-left and middle-click events. Keep those interaction rows disabled unless the platform layer gains an observable contract for them. Tray-enabled keep-open behavior requires `ShutdownMode.OnExplicitShutdown` plus an explicit decision when the last visible window closes.
+
+Create the tray icon once and toggle `IsVisible` afterwards. Disposing Avalonia's D-Bus `TrayIcon` while the application runs, for example to rebuild it when Options closes, makes `DBusTrayIconImpl.WatchAsync` throw a `TaskCanceledException` nothing observes, and the process aborts with every window and any recording in progress. It only reproduces with the icon shown, which is off by default, so a default-settings drive never finds it. The exit path still disposes the icon; keep that off any path the process must survive.
 
 ## Persistence and startup ordering
 
 Store settings at `$XDG_CONFIG_HOME/ScreenToGif/settings.json`, falling back to the platform ApplicationData directory when `XDG_CONFIG_HOME` is unset. Write a sibling `.tmp` file and atomically replace the destination; remove a leftover temporary file on failure. Malformed or unreadable JSON falls back to safe defaults.
+
+When more than one window edits settings, each commits only the fields it changed, onto the store as it is at save time. A window that copies the settings when it opens and writes the whole copy back when it closes silently reverts anything another window saved meanwhile, and that is reachable: Options opens non-modally from the tray, and a modal Options opened from Startup does not disable the Recorder. A field both windows edit, such as the capture mode, is written by Options only when its own control changed from the value it loaded. The writers are still unordered with respect to each other and share one `.tmp` path, so do not add a save that can run concurrently with another without serialising them.
 
 Apply settings that affect process construction before Avalonia starts. In particular, acquire the single-instance guard and select X11 software rendering before `StartWithClassicDesktopLifetime`; applying either from the Options window is too late for the current process. Map the configured FFmpeg executable through `SCREENTOGIF_FFMPEG` and derive `SCREENTOGIF_FFPROBE` from an absolute FFmpeg path so existing media services remain the single resolution seam.
 

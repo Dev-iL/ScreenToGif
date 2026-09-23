@@ -1,7 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -55,6 +55,7 @@ public partial class MainWindow
                 frame.Dispose();
             throw;
         }
+
         SetCurrentFrameIndex(-1);
         foreach (var frame in _frames)
             frame.Dispose();
@@ -270,6 +271,7 @@ public partial class MainWindow
             SetStatus("Open or select a frame before fitting the preview.");
             return;
         }
+
         PreviewImage.Width = double.NaN;
         PreviewImage.Height = double.NaN;
         PreviewImage.Stretch = Avalonia.Media.Stretch.Uniform;
@@ -295,6 +297,7 @@ public partial class MainWindow
             SetStatus($"Zoom must be between {ZoomLevel.Minimum}% and {ZoomLevel.Maximum}%.");
             return;
         }
+
         ApplyZoom(percent);
     }
 
@@ -364,5 +367,4 @@ public partial class MainWindow
         UpdateCurrentFramePreview();
         SetStatus($"Moved to frame {index + 1}.");
     }
-
 }
