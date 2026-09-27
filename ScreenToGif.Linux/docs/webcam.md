@@ -10,13 +10,15 @@ Refresh looks again, which is how a camera plugged in after the window opened be
 
 ## Capture size
 
-FFmpeg lists the camera's formats before the stream opens, and the recorder takes the largest mode at or below 1280x720, preferring a compressed mode such as MJPEG over a raw one of the same size because USB cameras usually sustain higher frame rates in them. A camera that offers nothing that small is opened at its smallest mode instead. The chosen camera and size are named in the window title and in the corner of the preview.
+FFmpeg lists the camera's formats before the stream opens. The **Capture size** selector shows each usable frame size once, including 1080p and higher when the camera offers them. On first use, the recorder selects the largest mode at or below 1280x720, or the smallest mode if none fits, and saves that concrete choice for the camera. Later choices replace it. A compressed mode such as MJPEG is preferred over a raw one at the same size because USB cameras usually sustain higher frame rates in it. The chosen camera and size are named in the window title and in the corner of the preview.
+
+Each camera's size is stored separately in `WebcamResolutions` in the settings file. The preference follows a camera when Linux provides a stable hardware path and the `/dev/videoN` number changes; without one, that device path is the key. If a saved size is no longer offered, the recorder selects and saves a currently supported initial size. A size that FFmpeg fails to open remains selected, so choose another capture size or press Refresh to retry.
 
 The Scale control resizes the window and nothing else. Recorded frames keep the camera's own resolution, so a recording made at Scale 0.5 still holds full-size frames; resize in the Editor when you want smaller output. See the decision record [Record webcam frames at the camera's capture resolution](../ADRs/20260921-record-webcam-at-camera-resolution.md).
 
 ## Recording
 
-Record (F7) starts, and pressing it again pauses. Stop (F8) ends the recording and opens it in the Editor. Discard (F9) throws away what has been recorded so far and leaves the preview running. Discard appears, and Stop becomes usable, only once at least one frame exists. While a recording is running or paused, the device selector, Refresh, Scale and the frame rate are locked, so the frames in one recording all come from one camera at one size.
+Record (F7) starts, and pressing it again pauses. Stop (F8) ends the recording and opens it in the Editor. Discard (F9) throws away what has been recorded so far and leaves the preview running. Discard appears, and Stop becomes usable, only once at least one frame exists. While a recording is running or paused, the device selector, capture size, Refresh, Scale and the frame rate are locked, so the frames in one recording all come from one camera at one size.
 
 The frame rate accepts 1 to 60 and is remembered in the settings file as `WebcamFps`, defaulting to 15. A value outside that range in a hand-edited file is brought back into it when the settings load.
 

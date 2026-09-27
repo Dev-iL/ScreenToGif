@@ -127,7 +127,7 @@ public sealed record WebcamStatus(
             return $"This account may not open {devicePath}. Add it to the '{DeviceGroupName}' group, sign in again, then press Refresh.";
         if (Mentions(text, "No such file or directory") || Mentions(text, "No such device"))
             return $"{devicePath} is no longer attached. Reconnect the camera, then press Refresh.";
-        return $"FFmpeg could not read {devicePath}. Press Refresh to try again, or choose another camera.";
+        return $"FFmpeg could not read {devicePath}. Press Refresh to try again, or choose another camera or capture size.";
     }
 
     private static bool Mentions(string text, string phrase) =>

@@ -2,8 +2,9 @@ using System.Runtime.InteropServices;
 
 namespace ScreenToGif.Linux.Services;
 
-public sealed record CameraDevice(string DevicePath, string Name)
+public sealed record CameraDevice(string DevicePath, string Name, string? StableId = null)
 {
+    public string PreferenceKey => StableId ?? DevicePath;
     public override string ToString() => Name;
 }
 
@@ -47,7 +48,7 @@ public sealed class CameraDeviceCatalog(
         foreach (var node in EnumerateNodes())
         {
             var devicePath = Path.Combine(deviceRoot, node);
-            var device = new CameraDevice(devicePath, ReadName(node) ?? node);
+            var device = new CameraDevice(devicePath, ReadName(node) ?? node, ReadStableId(node));
             switch (_probe.Probe(devicePath))
             {
                 case CameraProbeOutcome.VideoCapture:
@@ -94,6 +95,25 @@ public sealed class CameraDeviceCatalog(
         {
             var name = File.ReadAllText(Path.Combine(sysfsRoot, node, "name")).Trim();
             return name.Length == 0 ? null : CollapseRepeatedName(name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private string? ReadStableId(string node)
+    {
+        try
+        {
+            // The parent hardware path survives video-node renumbering. The V4L2 index keeps
+            // multiple capture endpoints on one device from sharing a preference.
+            var directory = Path.Combine(sysfsRoot, node);
+            var target = new DirectoryInfo(Path.Combine(directory, "device")).ResolveLinkTarget(true);
+            var index = File.ReadAllText(Path.Combine(directory, "index")).Trim();
+            return target is not null && int.TryParse(index, out var number) && number >= 0
+                ? $"sysfs:{target.FullName}#{number}"
+                : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

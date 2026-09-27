@@ -65,6 +65,7 @@ public sealed class LinuxApplicationSettings
     public int ProjectRetentionDays { get; set; } = 5;
     public string FfmpegPath { get; set; } = "ffmpeg";
     public int WebcamFps { get; set; } = 15;
+    public Dictionary<string, CameraResolution> WebcamResolutions { get; set; } = new(StringComparer.Ordinal);
 
     // Recorder. Defaults mirror the Windows recorder so a user moving between them is not surprised.
     public RecorderCaptureMode RecorderCaptureMode { get; set; } = RecorderCaptureMode.PerSecond;
@@ -138,6 +139,7 @@ public sealed class LinuxApplicationSettings
         RecorderLeft = RecorderLeft,
         RecorderTop = RecorderTop,
         WebcamFps = WebcamFps,
+        WebcamResolutions = new Dictionary<string, CameraResolution>(WebcamResolutions, StringComparer.Ordinal),
         BoardBrushColor = BoardBrushColor,
         BoardBrushWidth = BoardBrushWidth,
         BoardBrushHeight = BoardBrushHeight,
@@ -188,6 +190,11 @@ public sealed class LinuxApplicationSettingsStore
     private static LinuxApplicationSettings Normalize(LinuxApplicationSettings settings)
     {
         settings.WebcamFps = Math.Clamp(settings.WebcamFps, WebcamRecordingSession.MinimumFps, WebcamRecordingSession.MaximumFps);
+        settings.WebcamResolutions = settings.WebcamResolutions is null
+            ? new(StringComparer.Ordinal)
+            : new Dictionary<string, CameraResolution>(
+                settings.WebcamResolutions.Where(entry => !string.IsNullOrWhiteSpace(entry.Key)
+                    && entry.Value is { Width: > 0, Height: > 0 }), StringComparer.Ordinal);
         return settings;
     }
 

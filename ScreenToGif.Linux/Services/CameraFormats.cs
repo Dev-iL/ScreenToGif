@@ -10,6 +10,11 @@ public sealed record CameraCaptureFormat(string InputFormat, bool IsCompressed, 
     public long Area => (long)Width * Height;
 }
 
+public sealed record CameraResolution(int Width, int Height)
+{
+    public override string ToString() => $"{Width} × {Height}";
+}
+
 /// <summary>Parses FFmpeg's V4L2 format listing and chooses the capture mode to open.</summary>
 public static partial class CameraFormatCatalog
 {
@@ -51,7 +56,7 @@ public static partial class CameraFormatCatalog
         int maximumHeight = DefaultMaximumHeight)
     {
         var candidates = formats
-            .Where(format => !VideoCodecFormats.Contains(format.InputFormat))
+            .Where(IsUsable)
             .Select((format, order) => (Format: format, Order: order))
             .ToArray();
         if (candidates.Length == 0)
@@ -66,6 +71,30 @@ public static partial class CameraFormatCatalog
             .ThenBy(c => c.Order)
             .First().Format;
     }
+
+    public static IReadOnlyList<CameraResolution> Sizes(IEnumerable<CameraCaptureFormat> formats) => formats
+        .Where(IsUsable)
+        .Select(format => new CameraResolution(format.Width, format.Height))
+        .Distinct()
+        .OrderByDescending(size => (long)size.Width * size.Height)
+        .ThenByDescending(size => size.Width)
+        .ToArray();
+
+    public static CameraCaptureFormat? ChooseAtSize(IEnumerable<CameraCaptureFormat> formats, CameraResolution size) =>
+        Choose(formats.Where(format => format.Width == size.Width && format.Height == size.Height), int.MaxValue, int.MaxValue);
+
+    public static CameraResolution? SelectSize(IReadOnlyList<CameraCaptureFormat> formats, CameraResolution? saved)
+    {
+        if (saved is not null && Sizes(formats).Contains(saved))
+            return saved;
+
+        return Choose(formats) is { } initial ? new CameraResolution(initial.Width, initial.Height) : null;
+    }
+
+    private static bool IsUsable(CameraCaptureFormat format) =>
+        !VideoCodecFormats.Contains(format.InputFormat)
+        && format.Width is > 0 and <= EditorResourceLimits.MaximumMediaDimension
+        && format.Height is > 0 and <= EditorResourceLimits.MaximumMediaDimension;
 
     private static IEnumerable<(int Width, int Height)> ParseSizes(string text)
     {

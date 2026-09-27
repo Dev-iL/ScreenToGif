@@ -5,9 +5,9 @@
         x:Class="ScreenToGif.Linux.WebcamWindow"
         Classes="capture-shell webcam-shell"
         Title="ScreenToGif - Webcam Recorder"
-        Width="644"
+        Width="780"
         Height="391"
-        MinWidth="644"
+        MinWidth="780"
         MinHeight="260"
         CanResize="True"
         WindowStartupLocation="CenterScreen"
@@ -108,7 +108,7 @@
         </Border>
 
         <Border Grid.Row="1" Background="#25272A" BorderBrush="#555A60" BorderThickness="1,1,1,0">
-            <Grid Height="31" ColumnDefinitions="30,28,28,28,*,11,31,110,Auto,11,Auto,Auto,Auto">
+            <Grid Height="31" ColumnDefinitions="30,28,28,28,*,132,11,31,90,Auto,11,Auto,Auto,Auto">
                 <Button x:Name="OptionsButton" Grid.Column="1" Classes="capture-tool" Click="OptionsClick"
                         ToolTip.Tip="Open the application options.">
                     <icons:WindowsIcon Kind="Options" Width="20" Height="20" />
@@ -135,32 +135,36 @@
                           PlaceholderText="No cameras"
                           SelectionChanged="DeviceChanged"
                           ToolTip.Tip="Choose which camera to preview and record." />
-                <Border Grid.Column="5" Classes="capture-separator" />
-                <Border Grid.Column="6" ToolTip.Tip="Frames captured per second, between 1 and 60.">
+                <ComboBox x:Name="ResolutionSelector" Grid.Column="5" Margin="5,3"
+                          PlaceholderText="Capture size" SelectionChanged="ResolutionChanged"
+                          AutomationProperties.Name="Capture size"
+                          ToolTip.Tip="Capture size. Recorded frames use these pixels; preview scale only changes the window." />
+                <Border Grid.Column="6" Classes="capture-separator" />
+                <Border Grid.Column="7" ToolTip.Tip="Frames captured per second, between 1 and 60.">
                     <controls:FrequencyIndicator Margin="1" />
                 </Border>
-                <NumericUpDown x:Name="FrequencyInput" Grid.Column="7" Margin="1,3"
+                <NumericUpDown x:Name="FrequencyInput" Grid.Column="8" Margin="1,3"
                                Minimum="1" Maximum="60" Increment="1" FormatString="0"
                                ShowButtonSpinner="True" AllowSpin="True"
                                ValueChanged="FrameRateChanged"
                                ToolTip.Tip="Frames captured per second, between 1 and 60." />
-                <TextBlock Grid.Column="8" Text="fps" FontSize="12" Margin="1,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
-                <Border Grid.Column="9" Classes="capture-separator" />
-                <Button x:Name="DiscardButton" Grid.Column="10" Classes="capture-command" IsVisible="False" Click="DiscardClick"
+                <TextBlock Grid.Column="9" Text="fps" FontSize="12" Margin="1,0" VerticalAlignment="Center" Foreground="#B9BEC5" />
+                <Border Grid.Column="10" Classes="capture-separator" />
+                <Button x:Name="DiscardButton" Grid.Column="11" Classes="capture-command" IsVisible="False" Click="DiscardClick"
                         ToolTip.Tip="Throw away the frames recorded so far. Shortcut: F9">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <icons:WindowsIcon Kind="Cancel" Width="16" Height="16" />
                         <TextBlock Text="Discard" FontSize="12" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="RecordButton" Grid.Column="11" Classes="capture-command" IsEnabled="False" Click="RecordOrPauseClick"
+                <Button x:Name="RecordButton" Grid.Column="12" Classes="capture-command" IsEnabled="False" Click="RecordOrPauseClick"
                         ToolTip.Tip="Start recording the preview. Shortcut: F7">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <icons:WindowsIcon x:Name="RecordIcon" Kind="Record" Width="16" Height="16" />
                         <TextBlock x:Name="RecordLabel" Text="Record" FontSize="12" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="StopButton" Grid.Column="12" Classes="capture-command" IsEnabled="False" Click="StopClick"
+                <Button x:Name="StopButton" Grid.Column="13" Classes="capture-command" IsEnabled="False" Click="StopClick"
                         ToolTip.Tip="End the recording and open it in the editor. Shortcut: F8">
                     <StackPanel Orientation="Horizontal" Spacing="4">
                         <icons:WindowsIcon Kind="Stop" Width="16" Height="16" />

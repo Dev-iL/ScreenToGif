@@ -124,6 +124,38 @@ public sealed class CameraDeviceCatalogTests : IDisposable
             Assert.Single(Catalog(CameraProbeOutcome.VideoCapture).Discover().Devices).Name);
     }
 
+    [Fact]
+    public void HardwareIdentityFollowsRenumberingButSeparatesEndpointsAndEqualNames()
+    {
+        var hardware = Path.Combine(_sysfsRoot, "hardware");
+        Directory.CreateDirectory(hardware);
+        foreach (var (node, index) in new[] { ("video0", "0"), ("video1", "1"), ("video7", "0") })
+        {
+            Node(node, "Same Camera");
+            var directory = Path.Combine(_sysfsRoot, node);
+            Directory.CreateSymbolicLink(Path.Combine(directory, "device"), hardware);
+            File.WriteAllText(Path.Combine(directory, "index"), index);
+        }
+
+        var devices = Catalog(CameraProbeOutcome.VideoCapture).Discover().Devices;
+
+        Assert.Equal(devices[0].PreferenceKey, devices[2].PreferenceKey);
+        Assert.NotEqual(devices[0].PreferenceKey, devices[1].PreferenceKey);
+        Assert.NotEqual(devices[0].DevicePath, devices[2].DevicePath);
+    }
+
+    [Fact]
+    public void WithoutStableHardwareIdentityTheNodePathIsThePreferenceKey()
+    {
+        Node("video0", "Same Camera");
+        Node("video1", "Same Camera");
+
+        var devices = Catalog(CameraProbeOutcome.VideoCapture).Discover().Devices;
+
+        Assert.Equal(devices[0].DevicePath, devices[0].PreferenceKey);
+        Assert.NotEqual(devices[0].PreferenceKey, devices[1].PreferenceKey);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_sysfsRoot))

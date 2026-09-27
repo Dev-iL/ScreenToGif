@@ -141,6 +141,43 @@ public sealed class CameraFormatCatalogTests
     }
 
     [Fact]
+    public void SizesOfferEachUsableResolutionOnceIncludingModesAboveTheInitialBound()
+    {
+        var formats = CameraFormatCatalog.Parse(Listing);
+        var sizes = CameraFormatCatalog.Sizes(formats);
+
+        Assert.Equal(
+            [new CameraResolution(2560, 1440), new(1920, 1080), new(1280, 720), new(640, 480), new(320, 240)],
+            sizes);
+        Assert.Equal(new CameraCaptureFormat("mjpeg", true, 1920, 1080),
+            CameraFormatCatalog.ChooseAtSize(formats, new CameraResolution(1920, 1080)));
+    }
+
+    [Fact]
+    public void StoredSizeWinsAndDisappearingSizeFallsBackToConcreteInitialChoice()
+    {
+        var formats = CameraFormatCatalog.Parse(Listing);
+        Assert.Equal(new CameraResolution(1280, 720), CameraFormatCatalog.SelectSize(formats, null));
+        Assert.Equal(new CameraResolution(1920, 1080),
+            CameraFormatCatalog.SelectSize(formats, new CameraResolution(1920, 1080)));
+        Assert.Equal(new CameraResolution(1280, 720),
+            CameraFormatCatalog.SelectSize(formats, new CameraResolution(3840, 2160)));
+    }
+
+    [Fact]
+    public void SizesExcludeModesTheEditorCannotAcceptWithoutChangingItsLimit()
+    {
+        CameraCaptureFormat[] formats =
+        [
+            new("mjpeg", true, EditorResourceLimits.MaximumMediaDimension + 1, 1080),
+            new("mjpeg", true, 3840, 2160)
+        ];
+
+        Assert.Equal([new CameraResolution(3840, 2160)], CameraFormatCatalog.Sizes(formats));
+        Assert.Equal(new CameraResolution(3840, 2160), CameraFormatCatalog.SelectSize(formats, null));
+    }
+
+    [Fact]
     public void ListArgumentsAskV4l2ForEveryFormatTheDeviceOffers()
     {
         Assert.Equal(

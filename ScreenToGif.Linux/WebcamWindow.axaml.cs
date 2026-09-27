@@ -27,6 +27,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
 
     private readonly CameraDeviceCatalog _catalog;
     private readonly IFfmpegTool _ffmpeg;
+    private readonly Func<CameraDevice, CameraCaptureFormat, int, CameraFrameStream> _streamFactory;
     private readonly WebcamRecordingSession _session = new(new StopwatchPlaybackClock());
     private readonly DispatcherTimer _captureTimer = new();
     private readonly object _frameLock = new();
@@ -37,12 +38,14 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
     private WriteableBitmap? _previewBitmap;
     private byte[]? _latestFrame;
     private bool _renderQueued;
+    private bool _hasLiveFrame;
 
     private EditorWorkspace? _workspace;
     private string? _batchPath;
     private WebcamFrameWriter? _writer;
     private LoadedProject? _recording;
     private bool _switchingDevice;
+    private bool _switchingResolution;
     private bool _finishing;
     private bool _allowClose;
     private bool _openingCamera;
@@ -54,10 +57,12 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
     {
     }
 
-    internal WebcamWindow(CameraDeviceCatalog catalog, IFfmpegTool ffmpeg)
+    internal WebcamWindow(CameraDeviceCatalog catalog, IFfmpegTool ffmpeg,
+        Func<CameraDevice, CameraCaptureFormat, int, CameraFrameStream>? streamFactory = null)
     {
         _catalog = catalog;
         _ffmpeg = ffmpeg;
+        _streamFactory = streamFactory ?? ((device, format, rate) => CameraFrameStream.CreateForCamera(device.DevicePath, format, rate));
         InitializeComponent();
 
         FrequencyInput.Value = LinuxSettings.Current.WebcamFps;
@@ -97,6 +102,16 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         await OpenDeviceAsync(device);
     }
 
+    private async void ResolutionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_switchingResolution || _openingCamera || IsRecording
+            || DeviceSelector.SelectedItem is not CameraDevice device
+            || ResolutionSelector.SelectedItem is not CameraResolution resolution)
+            return;
+
+        await OpenDeviceAsync(device, resolution);
+    }
+
     /// <summary>
     /// Rediscovers cameras and reopens the preview. The previous stream is always torn down first, so
     /// the camera is released before another process or another node is asked for it.
@@ -118,6 +133,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
             _switchingDevice = true;
             try
             {
+                ClearResolutions();
                 DeviceSelector.ItemsSource = discovery.Devices;
                 DeviceSelector.SelectedItem = discovery.Devices.FirstOrDefault();
             }
@@ -143,7 +159,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
     /// holding the gate. Discovery and format listing both await, and the controls that could start a
     /// second open are disabled meanwhile, so two streams can never be installed over each other.
     /// </summary>
-    private async Task OpenDeviceAsync(CameraDevice device)
+    private async Task OpenDeviceAsync(CameraDevice device, CameraResolution? requested = null)
     {
         if (IsRecording || _openingCamera)
             return;
@@ -152,7 +168,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         try
         {
             RefreshControls();
-            await OpenCameraAsync(device);
+            await OpenCameraAsync(device, requested);
         }
         finally
         {
@@ -175,7 +191,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
             _lastStatus ?? WebcamStatus.Ready,
             _session.Stage,
             _openingCamera,
-            _stream is not null,
+            _stream is not null && _hasLiveFrame,
             _session.HasFrames,
             _recording is not null);
 
@@ -192,6 +208,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         StopButton.IsEnabled = controls.CanStop;
         DiscardButton.IsVisible = controls.ShowDiscard;
         DeviceSelector.IsEnabled = controls.CanChooseDevice;
+        ResolutionSelector.IsEnabled = controls.CanChooseDevice && ResolutionSelector.ItemCount > 0;
         RefreshButton.IsEnabled = controls.CanRefresh;
         FrequencyInput.IsEnabled = controls.CanChangeFrameRate;
         ScaleButton.IsEnabled = controls.CanScale;
@@ -203,19 +220,43 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         RecordingText.Text = $"{(recording ? "Recording" : "Paused")} - {Frames(_session.FrameCount)}";
     }
 
-    private async Task OpenCameraAsync(CameraDevice device)
+    private async Task OpenCameraAsync(CameraDevice device, CameraResolution? requested = null)
     {
         await CloseStreamAsync();
+        ClearResolutions();
         if (_closed)
             return;
 
+        StatusPanel.IsVisible = true;
+        StatusHeading.Text = "Opening camera";
+        StatusHeading.Foreground = InformationBrush;
+        StatusMessage.Text = "Checking capture sizes and starting the preview.";
+        StatusDetail.IsVisible = false;
+        StatusRetryButton.IsVisible = false;
+
         CameraCaptureFormat? format;
+        CameraResolution? selected;
         try
         {
             var listing = await _ffmpeg.RunFfmpegAsync(CameraFormatCatalog.ListArguments(device.DevicePath));
             if (_closed)
                 return;
-            format = CameraFormatCatalog.Choose(CameraFormatCatalog.Parse(listing.StandardError));
+            var formats = CameraFormatCatalog.Parse(listing.StandardError);
+            var sizes = CameraFormatCatalog.Sizes(formats);
+            LinuxSettings.Current.WebcamResolutions.TryGetValue(device.PreferenceKey, out var saved);
+            selected = CameraFormatCatalog.SelectSize(formats,
+                requested is not null && sizes.Contains(requested) ? requested : saved);
+            _switchingResolution = true;
+            try
+            {
+                ResolutionSelector.ItemsSource = sizes;
+                ResolutionSelector.SelectedItem = selected;
+            }
+            finally
+            {
+                _switchingResolution = false;
+            }
+            format = selected is null ? null : CameraFormatCatalog.ChooseAtSize(formats, selected);
         }
         catch (FfmpegUnavailableException ex)
         {
@@ -234,7 +275,22 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
             return;
         }
 
-        var stream = CameraFrameStream.CreateForCamera(device.DevicePath, format, FrameRate);
+        // Store the first concrete choice and every replacement before opening the stream. A failed
+        // mode remains selected so the person can choose another size without a silent fallback.
+        if (selected is not null && (!LinuxSettings.Current.WebcamResolutions.TryGetValue(device.PreferenceKey, out var stored)
+                                     || stored != selected))
+        {
+            try
+            {
+                await LinuxSettings.UpdateAsync(settings => settings.WebcamResolutions[device.PreferenceKey] = selected);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                await ShowMessageAsync("Capture size", $"The chosen capture size could not be remembered: {ex.Message}");
+            }
+        }
+
+        var stream = _streamFactory(device, format, FrameRate);
         stream.FrameArrived += FrameArrived;
         stream.Failed += StreamFailed;
         try
@@ -276,12 +332,27 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         ApplyPreviewScale();
     }
 
+    private void ClearResolutions()
+    {
+        _switchingResolution = true;
+        try
+        {
+            ResolutionSelector.ItemsSource = null;
+            ResolutionSelector.SelectedItem = null;
+        }
+        finally
+        {
+            _switchingResolution = false;
+        }
+    }
+
     private async Task CloseStreamAsync()
     {
         if (_stream is not { } stream)
             return;
 
         _stream = null;
+        _hasLiveFrame = false;
         stream.FrameArrived -= FrameArrived;
         stream.Failed -= StreamFailed;
         await stream.DisposeAsync();
@@ -312,7 +383,11 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
     }
 
     private void StreamFailed(object? sender, CameraStreamFailure failure) =>
-        Dispatcher.UIThread.Post(() => HandleStreamFailure(failure));
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ReferenceEquals(sender, _stream))
+                HandleStreamFailure(failure);
+        });
 
     /// <summary>
     /// The child has gone, so the stream is released before anything else: leaving it in place would
@@ -356,6 +431,11 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
 
         Preview.IsVisible = true;
         StatusPanel.IsVisible = false;
+        if (!_hasLiveFrame)
+        {
+            _hasLiveFrame = true;
+            RefreshControls();
+        }
         Preview.InvalidateVisual();
     }
 
@@ -364,10 +444,10 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         _lastStatus = status;
         var unusable = status.Availability != WebcamAvailability.Ready;
 
-        StatusPanel.IsVisible = unusable;
-        StatusHeading.Text = status.Heading;
+        StatusPanel.IsVisible = unusable || !_hasLiveFrame;
+        StatusHeading.Text = unusable ? status.Heading : _hasLiveFrame ? string.Empty : "Opening camera";
         StatusHeading.Foreground = status.IsFailure ? FailureBrush : InformationBrush;
-        StatusMessage.Text = status.Message;
+        StatusMessage.Text = unusable ? status.Message : _hasLiveFrame ? string.Empty : "Waiting for the first frame.";
         StatusDetailText.Text = status.Detail;
         StatusDetail.IsVisible = status.Detail.Length > 0;
         StatusDetail.IsExpanded = false;
@@ -721,11 +801,9 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
         if (LinuxSettings.Current.WebcamFps == FrameRate)
             return;
 
-        var settings = LinuxSettings.Current.Copy();
-        settings.WebcamFps = FrameRate;
         try
         {
-            await LinuxSettings.SaveAsync(settings);
+            await LinuxSettings.UpdateAsync(settings => settings.WebcamFps = FrameRate);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

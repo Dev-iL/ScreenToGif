@@ -10,11 +10,11 @@ Webcam recorder
 The Windows webcam recorder does not read frames from the camera when recording. It takes a screenshot of the preview region of its own window, so the recorded frame size follows the window's Scale slider (0.4 to 1.5 of the camera size, 0.5 by default). The Linux recorder receives decoded camera frames directly, so it has to choose what size to write. The Linux Editor can resize frames after recording.
 
 ## Decision
-Recorded frames are written at the resolution the camera stream was opened with. The Scale control only resizes the preview window; it never changes the recorded output. The default capture size is the largest format the camera offers at or below 1280x720, preferring compressed formats such as MJPEG over raw formats at the same size because USB cameras typically sustain higher frame rates in compressed modes.
+Recorded frames are written at the resolution the camera stream was opened with. The Scale control only resizes the preview window; it never changes the recorded output. The initial capture size is the largest format the camera offers at or below 1280x720, preferring compressed formats such as MJPEG over raw formats at the same size because USB cameras typically sustain higher frame rates in compressed modes. The Webcam window now lets the user select any listed usable size and remembers a concrete selection for each camera.
 
 ## Alternatives Considered
 - **Match Windows and record at the preview size**: Keeps output sizes identical across platforms — rejected because it requires a resize stage in the recording path, ties output quality to a window layout decision, and reproduces a side effect of the Windows screenshot implementation rather than a deliberate user contract.
-- **Add a resolution picker to the Webcam window**: Gives the user direct control — rejected for the first implementation because Windows offers no such control, and the Editor's resize covers the need; it can be added without changing this decision.
+- **Add a resolution picker to the Webcam window**: Deferred in the first implementation because Windows offers no such control. It was subsequently added to support native capture above 720p without changing the recorded-frame decision.
 
 ## Consequences
 

@@ -10,6 +10,38 @@ public sealed class LinuxApplicationSettingsTests : IDisposable
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"screentogif-settings-{Guid.NewGuid():N}");
 
     [Fact]
+    public async Task CameraResolutionsRoundTripSeparatelyAndCopyDoesNotShareTheMap()
+    {
+        var store = new LinuxApplicationSettingsStore(Path.Combine(_directory, "settings.json"));
+        var original = new LinuxApplicationSettings { WebcamFps = 24 };
+        original.WebcamResolutions["camera-a"] = new CameraResolution(1920, 1080);
+        original.WebcamResolutions["camera-b"] = new CameraResolution(640, 480);
+
+        await store.SaveAsync(original);
+        var loaded = store.Load();
+        var copied = loaded.Copy();
+        copied.WebcamResolutions["camera-a"] = new CameraResolution(3840, 2160);
+
+        Assert.Equal(new CameraResolution(1920, 1080), loaded.WebcamResolutions["camera-a"]);
+        Assert.Equal(new CameraResolution(640, 480), loaded.WebcamResolutions["camera-b"]);
+        Assert.Equal(24, loaded.WebcamFps);
+    }
+
+    [Fact]
+    public void OlderSettingsHaveNoAutomaticCameraChoiceAndKeepTheirValues()
+    {
+        var path = Path.Combine(_directory, "settings.json");
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(path, """{"WebcamFps": 30, "KeepOpen": false}""");
+
+        var settings = new LinuxApplicationSettingsStore(path).Load();
+
+        Assert.Empty(settings.WebcamResolutions);
+        Assert.Equal(30, settings.WebcamFps);
+        Assert.False(settings.KeepOpen);
+    }
+
+    [Fact]
     public async Task EveryRecorderSettingRoundTripsThroughTheSettingsFile()
     {
         var path = Path.Combine(_directory, "settings.json");
