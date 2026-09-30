@@ -7,7 +7,7 @@ TEST_PROJECT := ../ScreenToGif.Linux.Tests/ScreenToGif.Linux.Tests.csproj
 PUBLISH_DIR := ../artifacts/linux/$(CONFIGURATION)
 APP := $(CURDIR)/$(PUBLISH_DIR)/ScreenToGif.Linux
 
-.PHONY: all restore build test run editor publish install-desktop clean
+.PHONY: all restore build test run editor publish install-desktop deb deb-test clean
 
 all: build
 
@@ -31,6 +31,12 @@ publish: restore
 
 install-desktop: publish
 	./scripts/install-desktop-entry.sh "$(APP)"
+
+deb:
+	DOTNET="$(DOTNET)" ./scripts/build-deb.sh
+
+deb-test: deb
+	./scripts/test-deb.sh
 
 clean:
 	$(DOTNET) clean $(SOLUTION) --configuration $(CONFIGURATION)

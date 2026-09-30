@@ -256,6 +256,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
             {
                 _switchingResolution = false;
             }
+
             format = selected is null ? null : CameraFormatCatalog.ChooseAtSize(formats, selected);
         }
         catch (FfmpegUnavailableException ex)
@@ -436,6 +437,7 @@ public partial class WebcamWindow : Window, ICaptureShellWindow
             _hasLiveFrame = true;
             RefreshControls();
         }
+
         Preview.InvalidateVisual();
     }
 

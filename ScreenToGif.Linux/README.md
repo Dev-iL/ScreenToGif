@@ -85,6 +85,30 @@ This copies the icon and launcher to `~/.local/share`, so no root access is need
 ./scripts/install-desktop-entry.sh /absolute/path/to/ScreenToGif.Linux
 ```
 
+## Build, test and install a Debian package
+
+The package supports amd64 machines running Ubuntu 22.04+ or Debian 12+. It bundles the .NET runtime, so people installing it need no .NET SDK or runtime. A package build requires the .NET 9 SDK, `dpkg-deb` (from `dpkg`), `strip` (from `binutils`), and network access for NuGet restore. Testing also requires Docker installed and running, permission to access its daemon, and network access to pull images and install packages inside them.
+
+From the repository root:
+
+```bash
+make -C ScreenToGif.Linux deb
+make -C ScreenToGif.Linux deb-test
+```
+
+`make deb` builds a Release package with the portable `linux-x64` runtime and writes `artifacts/linux/screentogif_<version>-1_amd64.deb`, taking the version from `Directory.Build.props`. Build output and caches stay under `artifacts/`. `make deb-test` builds the package and tests it in disposable Ubuntu 22.04, Ubuntu 24.04 and Debian 12 containers: installation on a bare image, native library resolution, command-line help, ten seconds of startup under Xvfb, MP4 and WebM encoding with FFmpeg, and lintian. The package is mounted read-only; the containers are removed afterwards. To test just one release, run `DEB_TEST_IMAGES=ubuntu:24.04 make -C ScreenToGif.Linux deb-test`.
+
+Install the resulting package on your desktop from the repository root (replace the version in the filename with the one built):
+
+```bash
+sudo apt install ./artifacts/linux/screentogif_2.43.2-1_amd64.deb
+screentogif --help
+```
+
+APT installs FFmpeg as a dependency, including the encoders used for MP4 and WebM export. Launch ScreenToGif from the applications menu or run `screentogif`. Screen recording requires an X11 session. Webcam recording requires access to the camera device, normally through membership in the `video` group; after changing group membership, log out and back in.
+
+Remove the application with `sudo apt remove screentogif`. Removing or purging the package leaves each user's settings and saved projects alone.
+
 ## Current scope
 
 The Recorder captures a rectangle of the screen at a chosen frame rate, or one frame at a time, and hands the result to the Editor. It needs an X11 session: under a native Wayland session Record is disabled and says why. Window snapping, user-interaction capture, cursor following, guidelines, and desktop-wide hotkeys are not available; [`docs/recorder.md`](docs/recorder.md) lists each unavailable control beside the subsystem it needs, and [`docs/recorder-followups.md`](docs/recorder-followups.md) describes what each would take.
