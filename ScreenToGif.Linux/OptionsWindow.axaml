@@ -276,14 +276,14 @@
                     <Expander Classes="settings-group" Header="Capture mode">
                         <StackPanel>
                             <WrapPanel HorizontalAlignment="Center" Margin="5" IsEnabled="False" ToolTip.ShowOnDisabled="True"
-                                       ToolTip.Tip="BitBlt and DirectX are Windows GDI and DXGI capture back ends. The Linux recorder grabs the screen through X11, and the save-to-file and memory-cache choices belong to the Windows frame cache it does not use.">
+                                       ToolTip.Tip="BitBlt and DirectX are Windows GDI and DXGI capture back ends. The Linux recorder uses X11 or the Wayland sharing portal, and the save-to-file and memory-cache choices belong to the Windows frame cache it does not use.">
                                 <RadioButton Content="BitBlt" Margin="10" IsChecked="True" /><RadioButton Content="DirectX" Margin="10" /><RadioButton Content="Save to file" Margin="10" /><RadioButton Content="Memory cache" Margin="10" />
                             </WrapPanel>
                             <CheckBox x:Name="RecorderShowCursorCheckBox" Classes="setting" Content="Show the mouse cursor in the recording." />
                             <CheckBox Classes="setting" Content="Force memory cleanup during capture.  (Less memory, slower capture)" IsEnabled="False" ToolTip.ShowOnDisabled="True"
                                       ToolTip.Tip="This drives the Windows frame cache's garbage collection. The Linux recorder writes each frame to disk as it is captured and keeps no such cache." />
                             <CheckBox Classes="setting" Content="Improve capture performance on a remote desktop connection." IsEnabled="False" ToolTip.ShowOnDisabled="True"
-                                      ToolTip.Tip="This switches the Windows capture back end for Remote Desktop sessions, which has no counterpart in the X11 capture path." />
+                                      ToolTip.Tip="This switches the Windows capture back end for Remote Desktop sessions, which has no counterpart in the Linux capture back ends." />
                         </StackPanel>
                     </Expander>
                     <Expander Classes="settings-group" Header="Guidelines">

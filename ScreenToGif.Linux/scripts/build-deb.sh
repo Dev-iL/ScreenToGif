@@ -91,10 +91,12 @@ Priority: optional
 Maintainer: Nicke Manarin <nicke@outlook.com.br>
 Homepage: https://nicke.tech/screentogif
 Installed-Size: $(du -sk "$stage/usr" | cut -f1)
+Recommends: gstreamer1.0-pipewire, gstreamer1.0-plugins-base, libgstreamer-plugins-base1.0-0, xdg-desktop-portal
 Depends: ffmpeg, libc6 (>= 2.35), libgcc-s1, libstdc++6, zlib1g, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3t64 | libssl3, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxext6, libxfixes3, libxrender1, libice6, libsm6
 Description: Screen, webcam and sketchboard recorder, with integrated editor
  Records and edits animated images and videos. Includes the .NET runtime.
- Screen recording needs an X11 session. Webcam recording needs membership
+ Screen recording uses X11 or the Wayland ScreenCast portal with PipeWire
+ and the recommended GStreamer packages. Webcam recording needs membership
  in the video group and access to a video device.
 EOF
 find "$stage" -type d -exec chmod 755 {} +

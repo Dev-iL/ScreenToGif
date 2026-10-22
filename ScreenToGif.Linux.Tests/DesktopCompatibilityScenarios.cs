@@ -65,8 +65,23 @@ public sealed partial class DesktopWindowSmokeTests
             await UntilAsync(() => window.IsVisible && window.Bounds.Width > 0);
             await AtBothSizesAsync(window, kind.ToString().ToLowerInvariant());
             if (kind == CaptureShellKind.Recorder && Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland")
-                Assert.False(await Ui(() => window.FindControl<Button>("RecordButton")!.IsEnabled),
-                    "XWayland must not offer capture of the native Wayland desktop.");
+            {
+                Assert.True(await Ui(() => window.FindControl<Button>("RecordButton")!.IsEnabled),
+                    "Wayland offers source selection through the ScreenCast portal.");
+                Assert.True(await Ui(() => window.FindControl<Control>("WaylandInfo")!.IsVisible));
+                Assert.False(await Ui(() => window.FindControl<NumericUpDown>("CaptureWidthInput")!.IsEnabled),
+                    "A desktop frame cannot reposition the portal-selected source.");
+                await Ui(() =>
+                {
+                    var width = window.FindControl<NumericUpDown>("CaptureWidthInput")!;
+                    width.Value = 2;
+                    Assert.Equal(2m, width.Value);
+                    width.Value = 640;
+                    Assert.Equal(640m, width.Value);
+                    width.Value = null;
+                    Assert.Null(width.Value); // Clearing a selection must not restore a dead source's width.
+                });
+            }
             await Ui(window.Close);
         }
 

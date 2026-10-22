@@ -20,7 +20,8 @@ fi
 package=$(realpath -- "$package")
 # libc is a loader alias rather than a SONAME; resolve its Linux SONAME in the container.
 libraries=$(find "$repo_dir/ScreenToGif.Linux" -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*' \
-    -exec sed -n 's/.*\[DllImport("\(lib[^" ]*\)".*/\1/p' {} + | sort -u)
+    -exec sed -n -e 's/.*\[DllImport("\(lib[^" ]*\)".*/\1/p' \
+        -e 's/.*const string [^=]*= "\(lib[^" ]*\.so[^" ]*\)";.*/\1/p' {} + | sort -u)
 read -r -a images <<< "${DEB_TEST_IMAGES:-ubuntu:22.04 ubuntu:24.04 debian:12}"
 if [ "${#images[@]}" -eq 0 ]; then
     echo "Package test images: select at least one image with DEB_TEST_IMAGES, then rerun make deb-test." >&2
