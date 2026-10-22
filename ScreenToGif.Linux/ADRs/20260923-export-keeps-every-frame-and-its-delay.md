@@ -1,7 +1,7 @@
 # ADR: Export writes exactly the project's frames, with the last frame's delay set explicitly
 
 ## Status
-Accepted
+Accepted. The 2026-10-22 Wayland recording increment applies the fine per-entry frame rate considered below, together with the existing final-delay handling. The original 40 ms grid limitation is resolved; the regression test independently decodes non-grid APNG delays.
 
 ## Area
 Editor export
@@ -24,8 +24,8 @@ Animated images (GIF, APNG) list one concat entry per frame and set the last fra
 - The test fails on any regression of either property.
 
 ### Negative
-- A video export runs one 40 ms frame longer than the project, since the copy frame keeps a default duration.
-- Every exported delay still lands on a 40 ms grid, because the concat inputs are read at the image demuxer's default 25 fps: 66 ms frames alternate 80/40 ms, 33 ms frames play at 40 ms (a 30 fps recording plays about 20% slow), and 16 ms frames are dropped. This predates the decision and is unresolved.
+- A video export runs one input-tick frame longer than the project, since the copy frame keeps a default duration.
+- At the time of the original decision, every exported delay landed on a 40 ms grid, because the concat inputs are read at the image demuxer's default 25 fps: 66 ms frames alternate 80/40 ms, 33 ms frames play at 40 ms (a 30 fps recording plays about 20% slow), and 16 ms frames are dropped. This predated the decision and was resolved on 2026-10-22 by specifying a 1000 fps PNG input time base. Output formats retain their own timing precision.
 - The behavior was established against FFmpeg 6.1.1; other versions were not tested.
 
 ## Source

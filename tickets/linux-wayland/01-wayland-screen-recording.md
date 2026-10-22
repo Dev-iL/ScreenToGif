@@ -67,7 +67,19 @@ Started: 2026-10-22T15:21:12.509077+00:00
 Launch count: 1
 Base commit: c2a4a729f69ab67471d722e192317ca9228436d9
 Ready to land: no
-Manifest: not yet defined
+Manifest: /tmp/manifest-stage2-wayland.md
 
-Progress: understand
-The shaped Ticket is the scope. The existing capture/session/editor ownership contracts, available portal/PipeWire libraries and test coverage are under inspection. Stage 1 is complete at the target base. Implementation, native consent/source verification, X11 regression checks and a ready pull request remain required. No stage-2 completion gate has passed yet. Integration uses rebase in accordance with the user's project rule.
+Progress: verify
+
+The implementation records a full consented monitor/window through a dedicated ScreenCast portal connection and authorized PipeWire remote. The existing recording session owns pacing, pause, limits, writer artifacts and Editor handoff. The raw GStreamer observer retains one native buffer, normalizes RGB formats/crop/orientation metadata and supplies stream timestamps with the matching pipeline clock. Wayland geometry is read-only and does not overwrite remembered X11 geometry. Export input timestamps preserve millisecond delays.
+
+Validation for this checkpoint:
+
+- Linux build: zero warnings/errors. Full suite: 442 passed, 6 optional live/hardware skips, zero failures. The strengthened native ownership check and its native test group pass separately: 23 passed, zero skips/failures. A skipped native Wayland check is not acceptance evidence.
+- Actual isolated X11 Recorder: changing owned window, pause/resume, Stop into Editor and independently decoded APNG pixels/delays pass. Desktop/webcam and entrypoint checks pass. Simulated Wayland app-owned layouts at actual app scale1.25 pass, including tiny/read-only source dimensions and stage-1 Board/Editor/Options behavior; this is not fractional compositor capture evidence.
+- Debian package build and bare-install/library/help/Xvfb/MP4/WebM/lintian acceptance pass on Ubuntu22.04, Ubuntu24.04 and Debian12. These establish package behavior, not live Wayland capture on those systems.
+- Discriminating failures are retained for ignored rotation/crop, export delay quantization and read-only dimension reset. Native fixtures cover padded/negative stride, malformed crop/truncated pixels, changing frames, stream time, EOS, buffer replacement and actual reference release. Private-bus fixtures cover late success/error at all portal preparation stages, decline/cancel/retry, owner loss and session closure.
+
+Required live evidence remains unavailable: GNOME locked during consent verification and the initiating user has been asked to unlock. No native recording has yet completed. Current/fractional compositor scaling, actual cursor hidden/shown, Manual control, denial/cancel/source disappearance/stream failure/restart and active-sharing close/Exit still need retained native runs. No ready PR or completion mark is claimed.
+
+Local evidence: /tmp/stage2-final-build.log, /tmp/stage2-full-tests-final.log, /tmp/stage2-native-ownership.log, /tmp/stage2-private-x11-final/, /tmp/stage2-final-deb-build.log, /tmp/stage2-final-deb-test.log. Closed lifecycle coverage table and explicit gaps: /tmp/stage2-lifecycle-coverage.md. Review reports: /tmp/stage2-code-reviews/. Live command: bash ScreenToGif.Linux/scripts/check-wayland-recording.sh /tmp/screentogif-wayland-evidence; consent must select only the owned “ScreenToGif Wayland test source” window. The Manifest and run ID are unchanged; source/geometry, failure/recovery and PR gates remain required.
