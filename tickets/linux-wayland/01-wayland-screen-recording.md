@@ -1,7 +1,8 @@
 Kind: shaped
 Status: open
 Depends on: none
-Claimed by: codex
+Claimed by:
+Escalated: yes
 Auto: yes — granted by the user, explicitly in this conversation on 2026-10-22
 Type: feature
 
@@ -80,6 +81,32 @@ Validation for this checkpoint:
 - Debian package build and bare-install/library/help/Xvfb/MP4/WebM/lintian acceptance pass on Ubuntu22.04, Ubuntu24.04 and Debian12. These establish package behavior, not live Wayland capture on those systems.
 - Discriminating failures are retained for ignored rotation/crop, export delay quantization and read-only dimension reset. Native fixtures cover padded/negative stride, malformed crop/truncated pixels, changing frames, stream time, EOS, buffer replacement and actual reference release. Private-bus fixtures cover late success/error at all portal preparation stages, decline/cancel/retry, owner loss and session closure.
 
-Required live evidence remains unavailable: GNOME locked during consent verification and the initiating user has been asked to unlock. No native recording has yet completed. Current/fractional compositor scaling, actual cursor hidden/shown, Manual control, denial/cancel/source disappearance/stream failure/restart and active-sharing close/Exit still need retained native runs. No ready PR or completion mark is claimed.
+Required live evidence remains unavailable: on the unlocked desktop, the normal sharing dialog rejects accessible selection (`select_child` returns false; `grab_focus` raises `atspi_error`). A person must choose the test-owned source and click Share. No manual consent arrived before the three-minute check timeout; its application/source/process group cleaned up. No native recording has yet completed. Current/fractional compositor scaling, actual cursor hidden/shown, Manual control, denial/cancel/source disappearance/stream failure/restart and active-sharing close/Exit still need retained native runs. Draft PR: https://github.com/Dev-iL/ScreenToGif/pull/1 at implementation commit 7b25caadc8434db729966a7da044a23d6f187fac. No ready PR or completion mark is claimed.
 
 Local evidence: /tmp/stage2-final-build.log, /tmp/stage2-full-tests-final.log, /tmp/stage2-native-ownership.log, /tmp/stage2-private-x11-final/, /tmp/stage2-final-deb-build.log, /tmp/stage2-final-deb-test.log. Closed lifecycle coverage table and explicit gaps: /tmp/stage2-lifecycle-coverage.md. Review reports: /tmp/stage2-code-reviews/. Live command: bash ScreenToGif.Linux/scripts/check-wayland-recording.sh /tmp/screentogif-wayland-evidence; consent must select only the owned “ScreenToGif Wayland test source” window. The Manifest and run ID are unchanged; source/geometry, failure/recovery and PR gates remain required.
+
+<!-- manifest-dev-run-ticket-escalated -->
+## Native consent required
+
+Writer: codex
+Run ID: 20261022T152112Z-ebb56609
+Needed next: the initiating user, available on the unlocked desktop to select only “ScreenToGif Wayland test source” in the real sharing dialog.
+
+Blocker: GNOME's portal presents the source but rejects the accessibility selection/focus methods. The helper sends no Share action unless the uniquely named test source is verifiably selected. The normal consent interaction needs a person; unattended authority does not bypass it. Reply with availability for the live checks so the native test can be restarted with a fresh dialog. No further capture attempt should begin without that availability.
+
+Evidence: /tmp/stage2-native-live-final/consent-helper.log records the selection/focus rejection; wayland.trx records the three-minute consent timeout, rather than a native-capture pass. Its owned process group1316791 is absent after cleanup. Prior row-selection and focus alternatives reach the same native consent boundary. Locked-desktop attempts are separate failed access evidence, not capture evidence. Actual real-stream frames have not been obtained.
+
+Preserved result: branch ticket/linux-wayland-01-wayland-screen-recording, implementation commit7b25caadc8434db729966a7da044a23d6f187fac, draft PR https://github.com/Dev-iL/ScreenToGif/pull/1 targeting linux-support. The target remains unchanged and no merge/force push is authorized. Normal tests and package results are listed above; two further disposable mutations produce the expected behavioral failures for portal cursor negotiation and native replaced-buffer release. Their logs are /tmp/stage2-portal-cursor-negative.log and /tmp/stage2-native-retention-negative.log. Production sources are unchanged by those experiments.
+
+Gate status: AC-1.1 controlled boundary checks have passing and discriminating evidence. INV-G1/G2/G18 scope/integration/evidence checks and twelve review-code dimensions pass by author self-review; this is not an independent implementation review. INV-G3/G4, test-quality's full native scope, AC-2.1–2.4 and AC-3.1–3.3 retain native evidence gaps; review-design is BLOCKED for the real native recording/failure loop. AC-3.4/3.5 are incomplete because the PR remains draft and has no native capture proof. The complete closed lifecycle coverage table is /tmp/stage2-lifecycle-coverage.md. No required live behavior passes through a skip, Xvfb or source inspection.
+
+Required continuation: native consent and changing selected-window pixels → paced pause/resume → Stop into Editor/playback/edit/export with independently decoded pixels/delays; Manual; current/fractional compositor scaling and cursor hidden/shown; real denial/cancel/source disappearance/stream failure/restart/Recorder close/application Exit and cleanup. Preserve the current Manifest and same Ticket; complete these requirements here, rather than making a replacement Ticket. Refresh code/design evidence for any repair; keep the PR draft until the full contract holds.
+
+Material decisions, user calls first:
+
+- Full-source capture with read-only geometry rather than arbitrary overlay cropping: no relevant Taste entry applies; compositor consent/coordinate contracts do not map the XWayland frame reliably, and truthful source geometry is in scope. Native UI migration/global shortcuts remain excluded as requested.
+- In-process GStreamer plus the existing managed D-Bus library rather than direct PipeWire negotiation or an external command loop: no relevant Taste entry applies; installed supported libraries supply the transport and stream lifecycle while retaining the existing recording engine. Architecture review can revisit that choice in the new Wayland ADR.
+- Raw ordered buffer/event observation rather than the advisory appsink/converter sketch: controlled tests proved crop metadata loss and ignored orientation in simpler pipelines. The bounded observer keeps metadata and pixels together, without another recording engine or managed producer queue. The Initial Approach was advisory; no binding gate was lowered.
+- Millisecond PNG input timestamps rather than retaining the inherited25fps export grid: measured-delay acceptance requires the correction. Existing format checks pass, including the previously failing17ms case. The export ADR records the test enforcing it.
+
+Debt left: required live acceptance and the normal-consent interaction above. Other compositors/configurations remain unverified. No separate follow-up Ticket is warranted for these unfinished requirements; they stay on this Ticket. No known lower-threshold code finding, new suppression or unrelated cleanup is bundled into this change. The optional future project-surfaces recommendation is to record the existing xUnit/Make/scripts verification choice; accepting it would document the current workflow, not add another framework. The agent-decided Wayland ADR records the library/lifetime/full-source choice; reviewing it may revise that architecture. No drafted Taste entry or Appetite revision is outstanding.

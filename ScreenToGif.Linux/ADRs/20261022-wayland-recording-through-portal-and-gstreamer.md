@@ -34,6 +34,8 @@ Wayland recording additionally needs the desktop's ScreenCast portal/PipeWire se
 
 The live verification scope is recorded with the feature's Ticket and evidence. Controlled native/D-Bus tests establish protocol, pixels, timestamp and cancellation behavior; they cannot prove native desktop capture or support on untested compositors.
 
+Enforced by: `ScreenCastPortalTests`, `GStreamerScreenSourceTests`, `RecordingSessionTests.Stream_timestamps_measure_frame_gaps_and_exclude_paused_time` and the desktop control-event checks. The opt-in native recording check remains a separate live acceptance gate.
+
 ## Sources
 
 - [ScreenCast portal](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.ScreenCast.html)

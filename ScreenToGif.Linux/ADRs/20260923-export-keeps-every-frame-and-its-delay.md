@@ -15,7 +15,7 @@ Animated images (GIF, APNG) list one concat entry per frame and set the last fra
 ## Alternatives Considered
 - **Keep the repeated entry everywhere**: — GIF and APNG exports carry an extra frame, visible in any frame count and in players that step frames.
 - **Cap the output with `-frames:v N`**: — Tested; gives the same result as dropping the entry, including the lost last delay.
-- **Set a fine per-entry frame rate (`option framerate`)**: — Removes the 40 ms grid (below) in testing, but loses the last frame's duration on its own; now viable in combination with `-final_delay` and left as the lead for fixing the grid.
+- **Set a fine per-entry frame rate (`option framerate`)**: — Removes the 40 ms grid, but loses the last frame's duration on its own. The current combination uses a 1000 fps input time base with `-final_delay` to preserve the final duration.
 
 ## Consequences
 
@@ -27,6 +27,8 @@ Animated images (GIF, APNG) list one concat entry per frame and set the last fra
 - A video export runs one input-tick frame longer than the project, since the copy frame keeps a default duration.
 - At the time of the original decision, every exported delay landed on a 40 ms grid, because the concat inputs are read at the image demuxer's default 25 fps: 66 ms frames alternate 80/40 ms, 33 ms frames play at 40 ms (a 30 fps recording plays about 20% slow), and 16 ms frames are dropped. This predated the decision and was resolved on 2026-10-22 by specifying a 1000 fps PNG input time base. Output formats retain their own timing precision.
 - The behavior was established against FFmpeg 6.1.1; other versions were not tested.
+
+Enforced by: `LinuxEditorPipelineTests.Apng_preserves_measured_millisecond_delays_without_a_25fps_grid` and the existing GIF/MP4/WebM export checks.
 
 ## Source
 - Session: Linux Recorder implementation run, 2026-09-21 to 2026-09-23 (execution log `~/.manifest-dev/logs/do-log-20260921-175218.md`)
