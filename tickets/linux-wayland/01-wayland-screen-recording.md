@@ -1,7 +1,7 @@
 Kind: shaped
 Status: open
 Depends on: none
-Claimed by:
+Claimed by: codex
 Auto: yes — granted by the user, explicitly in this conversation on 2026-10-22
 Type: feature
 
@@ -50,3 +50,24 @@ Keep the existing recording-session and editor handoff contracts. Select an appr
 - Demonstrate correct selected-region/source mapping and cursor behavior at the desktop's current scale and an available fractional scale. If a configuration cannot be exercised, identify the missing evidence and do not claim it is supported based only on source inspection.
 - Verify X11 recording in an actual X11 test session and rerun the existing Linux build and tests with no failures. Add meaningful regression tests for capability detection and portal/stream lifecycle, using isolated configuration and media. Required native Wayland behavior cannot pass through mocks or skipped tests alone.
 - Update user-facing requirements, supported controls, consent behavior, known portal limitations, and the existing recorder follow-up documentation so they describe the shipped behavior accurately.
+
+<!-- manifest-dev-run-ticket-attempt -->
+## Execution attempt
+
+Ticket: tickets/linux-wayland/01-wayland-screen-recording.md
+Branch: ticket/linux-wayland-01-wayland-screen-recording
+Target: origin/linux-support
+Recovery purpose: preserve the portal/PipeWire implementation and verification on one stable branch.
+
+Run ID: 20261022T152112Z-ebb56609
+Invocation: direct user request; unattended work remains authorized by the Ticket's existing Auto grant.
+Writer: codex, acting in the user-invoked local session.
+Session: /root; the host exposes no separate resumable runner handle.
+Started: 2026-10-22T15:21:12.509077+00:00
+Launch count: 1
+Base commit: c2a4a729f69ab67471d722e192317ca9228436d9
+Ready to land: no
+Manifest: not yet defined
+
+Progress: understand
+The shaped Ticket is the scope. The existing capture/session/editor ownership contracts, available portal/PipeWire libraries and test coverage are under inspection. Stage 1 is complete at the target base. Implementation, native consent/source verification, X11 regression checks and a ready pull request remain required. No stage-2 completion gate has passed yet. Integration uses rebase in accordance with the user's project rule.
